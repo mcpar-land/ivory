@@ -6,14 +6,26 @@ use syntax::{dice::Dice, function::FunctionCall, number::Number};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Expression<R: Parse> {
-	first: ExpressionItem<R>,
-	sequence: Vec<(ExpressionOperator, ExpressionItem<R>)>,
+	pub first: ExpressionItem<R>,
+	pub sequence: Vec<(ExpressionOperator, ExpressionItem<R>)>,
 	roll_type: std::marker::PhantomData<R>,
 }
 
 impl<R: Debug + Clone + Parse> Parse for Expression<R> {
 	fn parse(input: &str) -> IResult<&str, Self> {
-		todo!()
+		use nom::{multi::many0, sequence::pair};
+		let (input, first) = ExpressionItem::parse(input)?;
+		let (input, sequence) =
+			many0(pair(ExpressionOperator::parse, ExpressionItem::parse))(input)?;
+
+		Ok((
+			input,
+			Expression {
+				first,
+				sequence,
+				roll_type: std::marker::PhantomData,
+			},
+		))
 	}
 }
 
@@ -27,11 +39,18 @@ pub enum ExpressionItem<R: Parse> {
 
 impl<R: Debug + Clone + Parse> Parse for ExpressionItem<R> {
 	fn parse(input: &str) -> IResult<&str, Self> {
-		todo!()
+		use nom::{branch::alt, combinator::map};
+
+		alt((
+			map(Number::parse, |v| ExpressionItem::Number(v)),
+			map(Dice::parse, |v| ExpressionItem::Dice(v)),
+			map(Expression::parse, |v| ExpressionItem::Parens(Box::new(v))),
+			map(FunctionCall::parse, |v| ExpressionItem::FunctionCall(v)),
+		))(input)
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExpressionOperator {
 	pub round: Option<ExpressionOperatorRound>,
 	pub op: ExpressionOperatorOp,
@@ -39,11 +58,19 @@ pub struct ExpressionOperator {
 
 impl Parse for ExpressionOperator {
 	fn parse(input: &str) -> IResult<&str, Self> {
-		todo!()
+		use nom::{branch::alt, combinator::map, sequence::pair};
+		let (input, (round, op)) = alt((
+			map(
+				pair(ExpressionOperatorRound::parse, ExpressionOperatorOp::parse),
+				|(round, op)| (Some(round), op),
+			),
+			map(ExpressionOperatorOp::parse, |op| (None, op)),
+		))(input)?;
+		Ok((input, ExpressionOperator { round, op }))
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ExpressionOperatorRound {
 	Round,
 	Ceil,
@@ -66,7 +93,7 @@ impl ExpressionOperatorRound {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ExpressionOperatorOp {
 	Add,
 	Sub,
@@ -90,5 +117,28 @@ impl ExpressionOperatorOp {
 				_ => unreachable!(),
 			},
 		))
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn parse_operators() {
+		assert_eq!(
+			ExpressionOperator::parse("+").unwrap().1,
+			ExpressionOperator {
+				round: None,
+				op: ExpressionOperatorOp::Add
+			}
+		);
+		assert_eq!(
+			ExpressionOperator::parse("_/").unwrap().1,
+			ExpressionOperator {
+				round: Some(ExpressionOperatorRound::Floor),
+				op: ExpressionOperatorOp::Div
+			}
+		);
 	}
 }

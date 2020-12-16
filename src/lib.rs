@@ -7,6 +7,7 @@ pub mod syntax {
 	pub mod function;
 	pub mod number;
 	pub mod program;
+	pub mod util;
 	pub mod variable;
 }
 pub mod context;
