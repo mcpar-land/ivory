@@ -1,6 +1,8 @@
 use crate::Parse;
 use serde::{Deserialize, Serialize};
 
+use super::{dice::Dice, expression::Expression};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VariableCall(String);
 
@@ -21,4 +23,10 @@ impl Parse for VariableAssignment {
 	fn parse(input: &str) -> crate::Result<(&str, Self)> {
 		todo!()
 	}
+}
+
+pub struct VariableRange {
+	// Ranges need to be able to evaluate without rolling.
+	min: Option<Expression<()>>,
+	max: Option<Expression<()>>,
 }

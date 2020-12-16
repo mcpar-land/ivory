@@ -1,0 +1,38 @@
+str_base 10;
+str_temp 0;
+str: str_base + str_temp;
+
+dex_base 10;
+dex_temp 0;
+dex: dex_base + dex_temp;
+
+con_base 10;
+con_temp 0;
+con: con_base + con_temp;
+
+int_base 10;
+int_temp 0;
+int: int_base + int_temp;
+
+wis_base 10;
+wis_temp 0;
+wis: wis_base + wis_temp;
+
+con_base 10;
+con_temp 0;
+con: con_base + con_temp;
+
+
+generic_mod stat: (stat - 10) _/ 2;
+str_mod: generic_mod(str);
+dex_mod: generic_mod(dex);
+con_mod: generic_mod(con);
+int_mod: generic_mod(int);
+wis_mod: generic_mod(wis);
+cha_mod: generic_mod(cha);
+
+level 1 ~ 0..;
+hit_die 6 ~ 0..;
+
+max_hp: hit_die + 1 + (level-1) * hit_die _/ 2;
+hp max_hp ~ ..=max_hp;
