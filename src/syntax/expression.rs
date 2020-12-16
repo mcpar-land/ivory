@@ -12,7 +12,7 @@ pub struct Expression<R: Parse> {
 }
 
 impl<R: Debug + Clone + Parse> Parse for Expression<R> {
-	fn parse(input: &str) -> crate::Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }
@@ -26,7 +26,7 @@ pub enum ExpressionItem<R: Parse> {
 }
 
 impl<R: Debug + Clone + Parse> Parse for ExpressionItem<R> {
-	fn parse(input: &str) -> crate::Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }
@@ -38,7 +38,7 @@ pub struct ExpressionOperator {
 }
 
 impl Parse for ExpressionOperator {
-	fn parse(input: &str) -> crate::Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }

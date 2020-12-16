@@ -1,4 +1,5 @@
 use crate::Parse;
+use nom::IResult;
 use serde::{Deserialize, Serialize};
 
 use super::{dice::Dice, expression::Expression};
@@ -7,7 +8,7 @@ use super::{dice::Dice, expression::Expression};
 pub struct VariableCall(String);
 
 impl Parse for VariableCall {
-	fn parse(input: &str) -> crate::Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }
@@ -20,7 +21,7 @@ pub struct VariableAssignment {
 }
 
 impl Parse for VariableAssignment {
-	fn parse(input: &str) -> crate::Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }

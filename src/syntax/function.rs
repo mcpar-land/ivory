@@ -1,4 +1,5 @@
 use crate::{syntax::expression::Expression, Parse, Result};
+use nom::IResult;
 use serde::{Deserialize, Serialize};
 
 use super::dice::Dice;
@@ -10,7 +11,7 @@ pub struct Function {
 }
 
 impl Parse for Function {
-	fn parse(input: &str) -> Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }
@@ -22,7 +23,7 @@ pub struct FunctionCall {
 }
 
 impl Parse for FunctionCall {
-	fn parse(input: &str) -> Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }

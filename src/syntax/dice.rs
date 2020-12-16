@@ -1,6 +1,8 @@
 use crate::Parse;
 use crate::Result;
-use nom::{bytes::complete::tag, character::complete::digit1, combinator::map};
+use nom::{
+	bytes::complete::tag, character::complete::digit1, combinator::map, IResult,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -10,7 +12,7 @@ pub struct Dice {
 }
 
 impl Parse for Dice {
-	fn parse(input: &str) -> Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }
@@ -25,7 +27,7 @@ pub enum DiceModifier {
 }
 
 impl Parse for DiceModifier {
-	fn parse(input: &str) -> Result<(&str, Self)> {
+	fn parse(input: &str) -> IResult<&str, Self> {
 		todo!()
 	}
 }
@@ -37,18 +39,12 @@ pub struct DiceBase {
 }
 
 impl Parse for DiceBase {
-	fn parse(input: &str) -> Result<(&str, Self)> {
-		let (input, amt) = map(digit1, |s: &str| s.parse())(input)?;
+	fn parse(input: &str) -> IResult<&str, Self> {
+		let (input, amt) = map(digit1, |s: &str| s.parse().unwrap())(input)?;
 		let (input, _) = tag("d")(input)?;
-		let (input, sides) = map(digit1, |s: &str| s.parse())(input)?;
+		let (input, sides) = map(digit1, |s: &str| s.parse().unwrap())(input)?;
 
-		Ok((
-			input,
-			DiceBase {
-				amt: amt?,
-				sides: sides?,
-			},
-		))
+		Ok((input, DiceBase { amt, sides }))
 	}
 }
 
