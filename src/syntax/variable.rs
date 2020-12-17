@@ -17,7 +17,7 @@ impl Parse for VariableCall {
 pub struct VariableAssignment {
 	pub name: String,
 	pub initial: f64,
-	pub range: Option<std::ops::Range<f64>>,
+	pub range: Option<VariableRange>,
 }
 
 impl Parse for VariableAssignment {
@@ -26,8 +26,15 @@ impl Parse for VariableAssignment {
 	}
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VariableRange {
 	// Ranges need to be able to evaluate without rolling.
-	min: Option<Expression<()>>,
-	max: Option<Expression<()>>,
+	pub min: Option<Expression<()>>,
+	pub max: Option<Expression<()>>,
+}
+
+impl Parse for VariableRange {
+	fn parse(input: &str) -> IResult<&str, Self> {
+		todo!()
+	}
 }

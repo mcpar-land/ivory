@@ -32,7 +32,7 @@ wis_mod: generic_mod(wis);
 cha_mod: generic_mod(cha);
 
 level 1 ~ 0..;
-hit_die 6 ~ 0..;
+hit_die 6 ~ 1..;
 
-max_hp: hit_die + 1 + (level-1) * hit_die _/ 2;
+max_hp: hit_die + (level-1) * hit_die _/ 2;
 hp max_hp ~ ..=max_hp;

@@ -1,35 +1,65 @@
 use crate::{syntax, Parse};
-use nom::IResult;
+use nom::{
+	bytes::complete::tag,
+	character::complete::multispace0,
+	multi::separated_list0,
+	sequence::{delimited, pair, separated_pair},
+	IResult,
+};
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::{fmt::Debug, marker::PhantomData};
 use syntax::{dice::Dice, function::FunctionCall, number::Number};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+use super::util::ws;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Expression<R: Parse> {
 	pub first: ExpressionItem<R>,
 	pub sequence: Vec<(ExpressionOperator, ExpressionItem<R>)>,
-	roll_type: std::marker::PhantomData<R>,
+	roll_type: PhantomData<R>,
+}
+
+impl<R: Parse> Expression<R> {
+	pub fn new(
+		first: ExpressionItem<R>,
+		sequence: Vec<(ExpressionOperator, ExpressionItem<R>)>,
+	) -> Self {
+		Expression {
+			first,
+			sequence,
+			roll_type: PhantomData,
+		}
+	}
 }
 
 impl<R: Debug + Clone + Parse> Parse for Expression<R> {
 	fn parse(input: &str) -> IResult<&str, Self> {
-		use nom::{multi::many0, sequence::pair};
+		use nom::multi::many0;
 		let (input, first) = ExpressionItem::parse(input)?;
-		let (input, sequence) =
-			many0(pair(ExpressionOperator::parse, ExpressionItem::parse))(input)?;
+		let (input, _) = multispace0(input)?;
+		let (input, sequence) = many0(delimited(
+			multispace0,
+			separated_pair(
+				ExpressionOperator::parse,
+				multispace0,
+				ExpressionItem::parse,
+			),
+			multispace0,
+		))(input)?;
 
-		Ok((
-			input,
-			Expression {
-				first,
-				sequence,
-				roll_type: std::marker::PhantomData,
-			},
-		))
+		Ok((input, Expression::new(first, sequence)))
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+fn expression_paren<R: Parse>(input: &str) -> IResult<&str, Expression<R>> {
+	delimited(
+		pair(tag("("), multispace0),
+		Expression::<R>::parse,
+		pair(multispace0, tag(")")),
+	)(input)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ExpressionItem<R: Parse> {
 	Number(Number),
 	Dice(Dice),
@@ -42,10 +72,12 @@ impl<R: Debug + Clone + Parse> Parse for ExpressionItem<R> {
 		use nom::{branch::alt, combinator::map};
 
 		alt((
-			map(Number::parse, |v| ExpressionItem::Number(v)),
 			map(Dice::parse, |v| ExpressionItem::Dice(v)),
-			map(Expression::parse, |v| ExpressionItem::Parens(Box::new(v))),
+			map(Number::parse, |v| ExpressionItem::Number(v)),
 			map(FunctionCall::parse, |v| ExpressionItem::FunctionCall(v)),
+			map(expression_paren, |v: Expression<R>| {
+				ExpressionItem::Parens(Box::new(v))
+			}),
 		))(input)
 	}
 }
@@ -54,6 +86,15 @@ impl<R: Debug + Clone + Parse> Parse for ExpressionItem<R> {
 pub struct ExpressionOperator {
 	pub round: Option<ExpressionOperatorRound>,
 	pub op: ExpressionOperatorOp,
+}
+
+impl ExpressionOperator {
+	pub fn new(
+		round: Option<ExpressionOperatorRound>,
+		op: ExpressionOperatorOp,
+	) -> Self {
+		Self { round, op }
+	}
 }
 
 impl Parse for ExpressionOperator {
@@ -122,6 +163,8 @@ impl ExpressionOperatorOp {
 
 #[cfg(test)]
 mod test {
+	use syntax::dice::DiceBase;
+
 	use super::*;
 
 	#[test]
@@ -139,6 +182,83 @@ mod test {
 				round: Some(ExpressionOperatorRound::Floor),
 				op: ExpressionOperatorOp::Div
 			}
+		);
+	}
+
+	#[test]
+	fn parse_expression() {
+		use ExpressionOperatorOp::*;
+		use ExpressionOperatorRound::*;
+		assert_eq!(
+			Expression::<()>::parse("108.3 * 77").unwrap().1,
+			Expression::new(
+				ExpressionItem::Number(Number(108.3)),
+				vec![(
+					ExpressionOperator::new(None, Mul),
+					ExpressionItem::Number(Number(77.0))
+				)]
+			)
+		);
+		let raw = "2d10\n_/ 5 * (-3 - pagman) + (2 / function(arg1, 2 + arg2))";
+		println!("{:#?}", Expression::<Dice>::parse(raw).unwrap().1);
+		assert_eq!(
+			Expression::<Dice>::parse(raw).unwrap().1,
+			Expression::new(
+				ExpressionItem::Dice(Dice {
+					base: DiceBase { amt: 2, sides: 10 },
+					modifiers: vec![]
+				}),
+				vec![
+					(
+						ExpressionOperator::new(Some(Floor), Div),
+						ExpressionItem::Number(Number(5.0))
+					),
+					(
+						ExpressionOperator::new(None, Mul),
+						ExpressionItem::Parens(Box::new(Expression::new(
+							ExpressionItem::Number(Number(-3.0)),
+							vec![(
+								ExpressionOperator::new(None, Sub),
+								ExpressionItem::FunctionCall(FunctionCall::new(
+									"pagman",
+									vec![]
+								))
+							)]
+						)))
+					),
+					(
+						ExpressionOperator::new(None, Add),
+						ExpressionItem::Parens(Box::new(Expression::new(
+							ExpressionItem::Number(Number(2.0)),
+							vec![(
+								ExpressionOperator::new(None, Div),
+								ExpressionItem::FunctionCall(FunctionCall::new(
+									"function",
+									vec![
+										Expression::new(
+											ExpressionItem::FunctionCall(FunctionCall::new(
+												"arg1",
+												vec![]
+											)),
+											vec![]
+										),
+										Expression::new(
+											ExpressionItem::Number(Number(2.0)),
+											vec![(
+												ExpressionOperator::new(None, Add),
+												ExpressionItem::FunctionCall(FunctionCall::new(
+													"arg2",
+													vec![]
+												))
+											)]
+										)
+									]
+								))
+							)]
+						)))
+					)
+				]
+			)
 		);
 	}
 }
