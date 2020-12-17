@@ -16,7 +16,7 @@ use super::{
 	dice::Dice,
 	util::{paren, ws},
 };
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Function {
 	pub name: String,
 	pub arguments: Vec<String>,
@@ -102,6 +102,14 @@ mod test {
 					Expression::new(ExpressionItem::Number(Number(-888.0)), vec![])
 				]
 			)
-		)
+		);
+		assert_eq!(
+			FunctionCall::parse("test_function()").unwrap().1,
+			FunctionCall::new("test_function", vec![])
+		);
+		assert_eq!(
+			FunctionCall::parse("test_function").unwrap().1,
+			FunctionCall::new("test_function", vec![])
+		);
 	}
 }

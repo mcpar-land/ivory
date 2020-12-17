@@ -33,3 +33,17 @@ pub fn identifier(input: &str) -> IResult<&str, &str> {
 		many0(alt((alphanumeric1, tag("_")))),
 	))(input)
 }
+
+pub mod test_utils {
+	use crate::{
+		syntax::{
+			expression::{Expression, ExpressionItem},
+			number::Number,
+		},
+		Parse,
+	};
+
+	pub fn number_expression<R: Parse>(number: f64) -> Expression<R> {
+		Expression::new(ExpressionItem::Number(Number(number)), vec![])
+	}
+}

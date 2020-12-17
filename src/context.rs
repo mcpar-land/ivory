@@ -26,7 +26,7 @@ impl<'a> IvoryContext<'a> {
 		for item in program.items() {
 			match item {
 				ProgramItem::VariableAssignment(v) => {
-					ctx.variables.insert(v.name.clone(), (&v, v.initial));
+					ctx.variables.insert(v.name.clone(), (&v, v.initial.0));
 				}
 				ProgramItem::Function(f) => {
 					ctx.functions.insert(f.name.clone(), &f);
