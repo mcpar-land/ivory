@@ -1,12 +1,5 @@
 use crate::Parse;
-use nom::{
-	branch::permutation,
-	bytes::complete::tag,
-	character::complete::digit1,
-	combinator::not,
-	sequence::{pair, tuple},
-	IResult,
-};
+use nom::IResult;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]

@@ -123,6 +123,6 @@ mod test {
 	fn parse_example_file() {
 		let file = std::fs::read_to_string("./example/pathfinder.ivory").unwrap();
 
-		let program = Program::new(file.as_str()).unwrap();
+		Program::new(file.as_str()).unwrap();
 	}
 }

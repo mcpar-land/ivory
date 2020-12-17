@@ -1,4 +1,3 @@
-use crate::Result;
 use nom::IResult;
 
 pub trait Parse: Sized + std::fmt::Debug + Clone {

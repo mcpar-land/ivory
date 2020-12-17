@@ -2,15 +2,12 @@ use crate::{syntax, Parse};
 use nom::{
 	bytes::complete::tag,
 	character::complete::multispace0,
-	multi::separated_list0,
 	sequence::{delimited, pair, separated_pair},
 	IResult,
 };
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, marker::PhantomData};
 use syntax::{dice::Dice, function::FunctionCall, number::Number};
-
-use super::util::ws;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Expression<R: Parse> {
@@ -99,7 +96,7 @@ impl ExpressionOperator {
 
 impl Parse for ExpressionOperator {
 	fn parse(input: &str) -> IResult<&str, Self> {
-		use nom::{branch::alt, combinator::map, sequence::pair};
+		use nom::{branch::alt, combinator::map};
 		let (input, (round, op)) = alt((
 			map(
 				pair(ExpressionOperatorRound::parse, ExpressionOperatorOp::parse),

@@ -1,13 +1,12 @@
 use crate::{
 	syntax::{expression::Expression, util::identifier},
-	Parse, Result,
+	Parse,
 };
 use nom::{
 	bytes::complete::tag,
 	character::complete::multispace1,
 	combinator::{map, opt},
 	multi::separated_list0,
-	sequence::tuple,
 	IResult,
 };
 use serde::{Deserialize, Serialize};
