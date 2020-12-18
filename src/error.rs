@@ -12,6 +12,7 @@ quick_error! {
 			from()
 		}
 		NameNotFound(name: String) {}
+		InsertedNameNotFound(name: String) {}
 		Serialization(err: Box<bincode::ErrorKind>) {
 			source(err)
 			from()

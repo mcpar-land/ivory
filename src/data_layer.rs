@@ -1,6 +1,6 @@
 use crate::{
 	syntax::{function::Function, variable::VariableAssignment},
-	Result,
+	IvoryError, Result,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -28,16 +28,22 @@ impl DataLayer {
 	}
 
 	pub fn get_variable(&self, name: &str) -> Result<&(VariableAssignment, f64)> {
-		todo!();
+		self
+			.variables
+			.get(name)
+			.ok_or(IvoryError::NameNotFound(name.to_string()))
 	}
 	pub fn set_variable(&mut self, name: &str, value: f64) -> Result<()> {
 		todo!();
 	}
-	pub fn get_variable_assignment_mut(
+	pub fn get_variable_mut(
 		&mut self,
 		name: &str,
-	) -> Result<&mut VariableAssignment> {
-		todo!();
+	) -> Result<&mut (VariableAssignment, f64)> {
+		self
+			.variables
+			.get_mut(name)
+			.ok_or(IvoryError::NameNotFound(name.to_string()))
 	}
 	pub fn insert_variable(&mut self, assignment: VariableAssignment) {
 		todo!();

@@ -4,10 +4,22 @@ use nom::{
 };
 use serde::{Deserialize, Serialize};
 
+pub trait Roll {
+	type Result;
+	fn roll(&self) -> Self::Result;
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Dice {
 	pub base: DiceBase,
 	pub modifiers: Vec<DiceModifier>,
+}
+
+impl Roll for Dice {
+	type Result = crate::expression_result::RollResult;
+	fn roll(&self) -> Self::Result {
+		todo!()
+	}
 }
 
 impl Parse for Dice {

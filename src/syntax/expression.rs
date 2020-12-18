@@ -1,16 +1,48 @@
+use super::dice::Roll;
 use crate::{syntax, Parse};
+use lazy_static::lazy_static;
 use nom::{
 	bytes::complete::tag,
 	character::complete::multispace0,
 	sequence::{delimited, pair, separated_pair},
 	IResult,
 };
+use prec::{Assoc, Climber, Rule};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, marker::PhantomData};
 use syntax::{dice::Dice, function::FunctionCall, number::Number};
 
+lazy_static! {
+	static ref CLIMBER: Climber<ExpressionOperator, ExpressionItem<Dice>, f64> =
+		Climber::new(vec![], climber_handler);
+}
+
+fn climber_handler(
+	lhs: ExpressionItem<Dice>,
+	op: ExpressionOperator,
+	rhs: ExpressionItem<Dice>,
+) -> ExpressionItem<Dice> {
+	use ExpressionOperatorOp::*;
+	use ExpressionOperatorRound::*;
+	match op.op {
+		Add => {}
+		Sub => {}
+		Mul => {}
+		Div => {}
+		Exp => {}
+	}
+	if let Some(round) = op.round {
+		match round {
+			Round => {}
+			Ceil => {}
+			Floor => {}
+		}
+	}
+	todo!();
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Expression<R: Parse> {
+pub struct Expression<R> {
 	pub first: ExpressionItem<R>,
 	pub sequence: Vec<(ExpressionOperator, ExpressionItem<R>)>,
 	roll_type: PhantomData<R>,
@@ -26,6 +58,12 @@ impl<R: Parse> Expression<R> {
 			sequence,
 			roll_type: PhantomData,
 		}
+	}
+}
+
+impl<R: Roll> Expression<R> {
+	pub fn eval(&self) -> Expression<R::Result> {
+		todo!();
 	}
 }
 
@@ -57,7 +95,7 @@ fn expression_paren<R: Parse>(input: &str) -> IResult<&str, Expression<R>> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum ExpressionItem<R: Parse> {
+pub enum ExpressionItem<R> {
 	Number(Number),
 	Dice(Dice),
 	Parens(Box<Expression<R>>),
@@ -79,7 +117,18 @@ impl<R: Debug + Clone + Parse> Parse for ExpressionItem<R> {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+impl Into<f64> for ExpressionItem<Dice> {
+	fn into(self) -> f64 {
+		match self {
+			Self::Number(Number(val)) => val,
+			Self::Dice(dice) => todo!(),
+			Self::Parens(parens) => todo!(),
+			Self::FunctionCall(call) => todo!(),
+		}
+	}
+}
+
+#[derive(Debug, Clone, Copy, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ExpressionOperator {
 	pub round: Option<ExpressionOperatorRound>,
 	pub op: ExpressionOperatorOp,
@@ -91,6 +140,17 @@ impl ExpressionOperator {
 		op: ExpressionOperatorOp,
 	) -> Self {
 		Self { round, op }
+	}
+
+	pub fn rule(
+		op: ExpressionOperatorOp,
+		assoc: Assoc,
+	) -> Rule<ExpressionOperator> {
+		use ExpressionOperatorRound::*;
+		Rule::new(Self::new(None, op), assoc)
+			| Rule::new(Self::new(Some(Round), op), assoc)
+			| Rule::new(Self::new(Some(Ceil), op), assoc)
+			| Rule::new(Self::new(Some(Floor), op), assoc)
 	}
 }
 
@@ -108,7 +168,7 @@ impl Parse for ExpressionOperator {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExpressionOperatorRound {
 	Round,
 	Ceil,
@@ -131,7 +191,7 @@ impl ExpressionOperatorRound {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExpressionOperatorOp {
 	Add,
 	Sub,

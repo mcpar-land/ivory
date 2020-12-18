@@ -1,13 +1,21 @@
 use crate::{
-	syntax::{dice::Dice, expression::Expression},
+	syntax::{
+		dice::Dice,
+		expression::{Expression, ExpressionItem, ExpressionOperator},
+	},
 	Parse,
 };
-use nom::IResult;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExpressionResult {
 	expression: Expression<RollResult>,
+}
+
+impl ExpressionResult {
+	pub fn total(&self) -> f64 {
+		todo!();
+	}
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,8 +24,8 @@ pub struct RollResult {
 	rolls: Vec<u32>,
 }
 
-impl Parse for RollResult {
-	fn parse(input: &str) -> IResult<&str, Self> {
-		todo!()
+impl RollResult {
+	pub fn total(&self) -> f64 {
+		todo!();
 	}
 }
