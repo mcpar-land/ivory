@@ -2,5 +2,6 @@
 [workspace]
 
 members = [
-	"ivory-interpreter"
+	"ivory-tokenizer",
+	"ivory-runtime"
 ]

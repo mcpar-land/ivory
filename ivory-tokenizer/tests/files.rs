@@ -1,9 +1,9 @@
-use ivory_interpreter;
+use ivory_tokenizer;
 
 #[cfg(test)]
 #[test]
 fn testing_files() {
-	use ivory_interpreter::{module::Module, Parse};
+	use ivory_tokenizer::{module::Module, Parse};
 
 	let file_names = &["test01"];
 	for name in file_names {

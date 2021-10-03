@@ -1,5 +1,5 @@
 [package]
-name = "ivory-interpreter"
+name = "ivory-tokenizer"
 version = "0.1.0"
 authors = ["sc"]
 edition = "2018"
