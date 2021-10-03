@@ -22,7 +22,7 @@ pub enum StructDefinitionValue {
 	Type(Type),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StructName(String);
 
 impl Parse for StructName {

@@ -6,7 +6,7 @@ use nom::{
 	branch::alt,
 	character::complete::{char, multispace0},
 	combinator::map,
-	multi::separated_list0,
+	multi::{many0, separated_list0},
 	sequence::{delimited, pair, preceded, separated_pair},
 };
 
@@ -35,7 +35,8 @@ impl Parse for Expression {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		let (input, first) = ExpressionComponent::parse(input)?;
 		let (input, pairs) =
-			separated_list0(multispace0, ExpressionPair::parse)(input)?;
+			many0(preceded(multispace0, ExpressionPair::parse))(input)?;
+
 		Ok((input, Self { first, pairs }))
 	}
 }
@@ -49,7 +50,7 @@ pub enum ExpressionComponent {
 }
 
 impl ExpressionComponent {
-	fn is_accessor(&self) -> bool {
+	pub fn is_accessor(&self) -> bool {
 		match self {
 			Self::Accessor(_) => true,
 			_ => false,
@@ -123,5 +124,27 @@ impl Parse for ExpressionPair {
 				},
 			),
 		))(input)
+	}
+}
+
+#[cfg(test)]
+#[test]
+fn parse_expression() {
+	let exprs = &[
+		"11 + 3",
+		"11+3",
+		"5 * 4 + 13 - 2",
+		"5\n *4+ 13    -2 ",
+		"(11 + 3) / (3 + 11)",
+	];
+	for expr in exprs {
+		match Expression::parse(expr) {
+			Ok(res) => {
+				println!("{:?}", res);
+			}
+			Err(err) => {
+				panic!("Error parsing expression \"{}\" -> {}", expr, err);
+			}
+		}
 	}
 }

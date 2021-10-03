@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use nom::IResult;
 
 pub mod accessor;
+pub mod error;
 pub mod expression;
 pub mod function;
 pub mod istruct;

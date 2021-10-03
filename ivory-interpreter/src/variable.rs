@@ -6,7 +6,7 @@ pub struct Variable {
 	pub value: (), // TODO
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableName(pub String);
 
 impl Parse for VariableName {

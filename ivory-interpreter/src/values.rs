@@ -1,3 +1,8 @@
+use nom::{
+	branch::alt,
+	combinator::{map, value},
+};
+
 use crate::Parse;
 
 use self::{
@@ -27,6 +32,63 @@ pub enum Value {
 
 impl Parse for Value {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		todo!()
+		alt((
+			map(BooleanValue::parse, |v| Self::Boolean(v)),
+			map(DecimalValue::parse, |v| Self::Decimal(v)),
+			map(IntegerValue::parse, |v| Self::Integer(v)),
+			map(StringValue::parse, |v| Self::String(v)),
+			map(ArrayValue::parse, |v| Self::Array(v)),
+			map(ObjectValue::parse, |v| Self::Object(v)),
+			map(StructInstance::parse, |v| Self::Struct(v)),
+		))(input)
+	}
+}
+
+#[cfg(test)]
+#[test]
+fn parse_boolean() {
+	if let Value::Boolean(_) = Value::parse("true").unwrap().1 {
+	} else {
+		panic!();
+	}
+}
+
+#[test]
+fn parse_decimal() {
+	if let Value::Decimal(_) = Value::parse("3.14").unwrap().1 {
+	} else {
+		panic!();
+	}
+}
+
+#[test]
+fn parse_integer() {
+	if let Value::Integer(_) = Value::parse("1234").unwrap().1 {
+	} else {
+		panic!();
+	}
+}
+
+#[test]
+fn parse_string() {
+	if let Value::String(_) = Value::parse("\"this is a string\"").unwrap().1 {
+	} else {
+		panic!();
+	}
+}
+
+fn parse_array() {
+	if let Value::Array(_) = Value::parse("[3, 4, 6]").unwrap().1 {
+	} else {
+		panic!();
+	}
+}
+
+fn parse_object() {
+	if let Value::Object(_) =
+		Value::parse("{foo: 3, bar: 6, baz: false}").unwrap().1
+	{
+	} else {
+		panic!();
 	}
 }
