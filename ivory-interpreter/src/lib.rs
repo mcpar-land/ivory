@@ -3,11 +3,12 @@ use std::fmt::Debug;
 use nom::IResult;
 
 pub mod accessor;
+pub mod commands;
 pub mod error;
 pub mod expression;
-pub mod function;
 pub mod istruct;
 pub mod itype;
+pub mod module;
 pub mod util;
 pub mod values;
 pub mod variable;

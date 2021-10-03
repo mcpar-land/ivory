@@ -6,7 +6,7 @@ use nom::{
 use crate::Parse;
 
 use self::{
-	array::ArrayValue, boolean::BooleanValue, decimal::DecimalValue,
+	array::ArrayValue, boolean::BooleanValue, decimal::DecimalValue, dice::Dice,
 	integer::IntegerValue, object::ObjectValue, string::StringValue,
 	struct_instance::StructInstance,
 };
@@ -14,6 +14,7 @@ use self::{
 pub mod array;
 pub mod boolean;
 pub mod decimal;
+pub mod dice;
 pub mod integer;
 pub mod object;
 pub mod string;
@@ -25,6 +26,7 @@ pub enum Value {
 	Decimal(DecimalValue),
 	Integer(IntegerValue),
 	String(StringValue),
+	Dice(Dice),
 	Array(ArrayValue),
 	Object(ObjectValue),
 	Struct(StructInstance),
@@ -33,6 +35,7 @@ pub enum Value {
 impl Parse for Value {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		alt((
+			map(Dice::parse, |v| Self::Dice(v)),
 			map(BooleanValue::parse, |v| Self::Boolean(v)),
 			map(DecimalValue::parse, |v| Self::Decimal(v)),
 			map(IntegerValue::parse, |v| Self::Integer(v)),
@@ -72,6 +75,14 @@ fn parse_integer() {
 #[test]
 fn parse_string() {
 	if let Value::String(_) = Value::parse("\"this is a string\"").unwrap().1 {
+	} else {
+		panic!();
+	}
+}
+
+#[test]
+fn parse_dice() {
+	if let Value::Dice(_) = Value::parse("1d20s>10").unwrap().1 {
 	} else {
 		panic!();
 	}

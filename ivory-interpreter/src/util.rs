@@ -37,6 +37,14 @@ pub fn test_multiple<'a, T: Parse>(inputs: &[&'a str]) {
 	}
 }
 
+pub fn test_multiple_should_fail<'a, T: Parse>(inputs: &[&'a str]) {
+	for input in inputs {
+		if let Ok(_) = T::parse(input) {
+			panic!("Expected error parsing \"{}\", got Ok", input);
+		}
+	}
+}
+
 #[cfg(test)]
 #[test]
 fn test_snake_case() {

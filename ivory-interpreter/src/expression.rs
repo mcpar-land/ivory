@@ -1,5 +1,3 @@
-pub mod dice;
-pub mod function_call;
 pub mod math;
 
 use nom::{
@@ -12,7 +10,7 @@ use nom::{
 
 use crate::{accessor::Accessor, values::Value, Parse};
 
-use self::{dice::DiceOp, function_call::FunctionCall, math::ExprOpMath};
+use self::math::ExprOpMath;
 
 #[derive(Clone, Debug)]
 pub struct Expression {
@@ -46,7 +44,6 @@ pub enum ExpressionComponent {
 	Value(Value),
 	Accessor(Accessor),
 	Paren(Box<Expression>),
-	FunctionCall(FunctionCall),
 }
 
 impl ExpressionComponent {
@@ -66,64 +63,26 @@ impl Parse for ExpressionComponent {
 			map(delimited(char('('), Expression::parse, char(')')), |r| {
 				Self::Paren(Box::new(r))
 			}),
-			map(FunctionCall::parse, |r| Self::FunctionCall(r)),
 		))(input)
 	}
 }
 
 #[derive(Clone, Debug)]
-pub enum ExpressionPair {
-	Math {
-		op: ExprOpMath,
-		component: ExpressionComponent,
-	},
-	Dice {
-		component: ExpressionComponent,
-		operations: Vec<DiceOp>,
-	},
-}
-
-impl ExpressionPair {
-	pub fn component(&self) -> &ExpressionComponent {
-		match &self {
-			ExpressionPair::Math { component, .. } => component,
-			ExpressionPair::Dice { component, .. } => component,
-		}
-	}
-	pub fn is_dice(&self) -> bool {
-		match self {
-			ExpressionPair::Math { .. } => false,
-			ExpressionPair::Dice { .. } => true,
-		}
-	}
+pub struct ExpressionPair {
+	pub op: ExprOpMath,
+	pub component: ExpressionComponent,
 }
 
 impl Parse for ExpressionPair {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		alt((
-			map(
-				separated_pair(
-					ExprOpMath::parse,
-					multispace0,
-					ExpressionComponent::parse,
-				),
-				|(op, component)| ExpressionPair::Math { op, component },
+		map(
+			separated_pair(
+				ExprOpMath::parse,
+				multispace0,
+				ExpressionComponent::parse,
 			),
-			map(
-				preceded(
-					pair(char('d'), multispace0),
-					separated_pair(
-						ExpressionComponent::parse,
-						multispace0,
-						separated_list0(multispace0, DiceOp::parse),
-					),
-				),
-				|(component, operations)| ExpressionPair::Dice {
-					component,
-					operations,
-				},
-			),
-		))(input)
+			|(op, component)| ExpressionPair { op, component },
+		)(input)
 	}
 }
 
