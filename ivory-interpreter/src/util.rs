@@ -8,6 +8,8 @@ use nom::{
 	IResult,
 };
 
+use crate::Parse;
+
 pub fn snake_case(input: &str) -> IResult<&str, &str> {
 	recognize(pair(
 		one_of("_abcdefghijklmnopqrstuvwxyz"),
@@ -24,6 +26,15 @@ pub fn variable_name(input: &str) -> IResult<&str, &str> {
 		alt((alpha1, tag("_"))),
 		many0(alt((alphanumeric1, tag("_")))),
 	))(input)
+}
+
+pub fn test_multiple<'a, T: Parse>(inputs: &[&'a str]) {
+	for input in inputs {
+		match T::parse(input) {
+			Ok(val) => println!("{:?}", val),
+			Err(err) => panic!("Error parsing \"{}\" -> {:?}", input, err),
+		}
+	}
 }
 
 #[cfg(test)]

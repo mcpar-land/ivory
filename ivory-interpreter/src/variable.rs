@@ -1,9 +1,28 @@
-use crate::{util::variable_name, Parse};
+use nom::{
+	character::complete::{char, multispace0},
+	combinator::map,
+	sequence::{separated_pair, tuple},
+};
+
+use crate::{expression::Expression, util::variable_name, Parse};
 
 #[derive(Clone, Debug)]
 pub struct Variable {
 	pub name: VariableName,
-	pub value: (), // TODO
+	pub value: Expression,
+}
+
+impl Parse for Variable {
+	fn parse(input: &str) -> nom::IResult<&str, Self> {
+		map(
+			separated_pair(
+				VariableName::parse,
+				tuple((multispace0, char('='), multispace0)),
+				Expression::parse,
+			),
+			|(name, value)| Self { name, value },
+		)(input)
+	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

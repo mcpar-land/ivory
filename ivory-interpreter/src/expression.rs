@@ -130,21 +130,16 @@ impl Parse for ExpressionPair {
 #[cfg(test)]
 #[test]
 fn parse_expression() {
-	let exprs = &[
+	use crate::util::test_multiple;
+
+	test_multiple::<Expression>(&[
 		"11 + 3",
 		"11+3",
 		"5 * 4 + 13 - 2",
 		"5\n *4+ 13    -2 ",
 		"(11 + 3) / (3 + 11)",
-	];
-	for expr in exprs {
-		match Expression::parse(expr) {
-			Ok(res) => {
-				println!("{:?}", res);
-			}
-			Err(err) => {
-				panic!("Error parsing expression \"{}\" -> {}", expr, err);
-			}
-		}
-	}
+		"38 /^ 3",
+		"18 + bogos[34] / binted[8 * 8]",
+		"((((((((((((69))))))))))))",
+	]);
 }

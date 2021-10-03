@@ -77,13 +77,15 @@ fn parse_string() {
 	}
 }
 
+#[test]
 fn parse_array() {
-	if let Value::Array(_) = Value::parse("[3, 4, 6]").unwrap().1 {
+	if let Value::Array(_) = Value::parse("[3, \"bogo\", bintered]").unwrap().1 {
 	} else {
 		panic!();
 	}
 }
 
+#[test]
 fn parse_object() {
 	if let Value::Object(_) =
 		Value::parse("{foo: 3, bar: 6, baz: false}").unwrap().1

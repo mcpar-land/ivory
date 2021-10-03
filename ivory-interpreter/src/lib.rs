@@ -12,14 +12,6 @@ pub mod util;
 pub mod values;
 pub mod variable;
 
-trait Parse: Sized + Clone + Debug {
+pub trait Parse: Sized + Clone + Debug {
 	fn parse(input: &str) -> IResult<&str, Self>;
-}
-
-#[cfg(test)]
-mod tests {
-	#[test]
-	fn it_works() {
-		assert_eq!(2 + 2, 4);
-	}
 }
