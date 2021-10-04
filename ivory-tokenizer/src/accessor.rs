@@ -9,7 +9,7 @@ use nom::{
 use crate::{expression::Expression, variable::VariableName, Parse};
 
 #[derive(Clone, Debug)]
-pub struct Accessor(VariableName, Vec<AccessorComponent>);
+pub struct Accessor(pub VariableName, pub Vec<AccessorComponent>);
 
 impl Parse for Accessor {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {

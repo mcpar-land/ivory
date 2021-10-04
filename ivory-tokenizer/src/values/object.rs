@@ -54,7 +54,8 @@ fn parse_object() {
 			bird: true,
 			other_bird: true
 		},
-		faz: 3.4345
+		faz: 3.4345,
+		pythag: a b -> math.sqrt( a*a + b*b )
 	}"#;
 
 	let x = ObjectValue::parse(o).unwrap().1;

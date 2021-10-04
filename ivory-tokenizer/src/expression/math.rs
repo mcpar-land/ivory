@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{character::complete::one_of, combinator::opt};
 
 use crate::Parse;
@@ -59,5 +61,28 @@ impl Parse for ExprOpMathRound {
 				_ => unreachable!(),
 			},
 		))
+	}
+}
+
+impl Display for ExprOpMath {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}{}",
+			match self.kind {
+				ExprOpMathKind::Add => "+",
+				ExprOpMathKind::Sub => "-",
+				ExprOpMathKind::Mul => "*",
+				ExprOpMathKind::Div => "/",
+			},
+			match &self.round {
+				Some(round) => match round {
+					ExprOpMathRound::Up => "^",
+					ExprOpMathRound::Down => "_",
+					ExprOpMathRound::Round => "~",
+				},
+				None => "",
+			}
+		)
 	}
 }

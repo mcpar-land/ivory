@@ -19,10 +19,10 @@ pub trait Parse: Sized + Clone + Debug {
 }
 
 /// Tokenize a string into a module.
-pub fn tokenize(input: &str) -> Result<Module, (String, ErrorKind)> {
+pub fn tokenize(input: &str) -> Result<Module, String> {
 	use nom::Finish;
 	Module::parse(input)
 		.finish()
 		.map(|(_, m)| m)
-		.map_err(|e| (format!("{}", e), e.code))
+		.map_err(|e| format!("{}", e))
 }

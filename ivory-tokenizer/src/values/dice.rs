@@ -62,17 +62,17 @@ impl Parse for DiceOp {
 			map(preceded(tag("dh"), DiceNumber::parse), |c| {
 				Self::DropHigh(c)
 			}),
-			map(preceded(tag("!"), DiceCondition::parse), |c| {
-				Self::Explode(c)
-			}),
 			map(preceded(tag("!!"), DiceCondition::parse), |c| {
 				Self::CompoundingExplode(c)
 			}),
-			map(preceded(tag("r"), DiceCondition::parse), |c| {
-				Self::Reroll(c)
+			map(preceded(tag("!"), DiceCondition::parse), |c| {
+				Self::Explode(c)
 			}),
 			map(preceded(tag("ro"), DiceCondition::parse), |c| {
 				Self::RerollOnce(c)
+			}),
+			map(preceded(tag("r"), DiceCondition::parse), |c| {
+				Self::Reroll(c)
 			}),
 		))(input)
 	}

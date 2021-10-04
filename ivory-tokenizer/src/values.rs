@@ -7,14 +7,15 @@ use crate::Parse;
 
 use self::{
 	array::ArrayValue, boolean::BooleanValue, decimal::DecimalValue, dice::Dice,
-	integer::IntegerValue, object::ObjectValue, string::StringValue,
-	struct_instance::StructInstance,
+	function::FunctionValue, integer::IntegerValue, object::ObjectValue,
+	string::StringValue, struct_instance::StructInstance,
 };
 
 pub mod array;
 pub mod boolean;
 pub mod decimal;
 pub mod dice;
+pub mod function;
 pub mod integer;
 pub mod object;
 pub mod string;
@@ -30,11 +31,13 @@ pub enum Value {
 	Array(ArrayValue),
 	Object(ObjectValue),
 	Struct(StructInstance),
+	Function(FunctionValue),
 }
 
 impl Parse for Value {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		alt((
+			map(FunctionValue::parse, |v| Self::Function(v)),
 			map(Dice::parse, |v| Self::Dice(v)),
 			map(BooleanValue::parse, |v| Self::Boolean(v)),
 			map(DecimalValue::parse, |v| Self::Decimal(v)),
@@ -100,6 +103,16 @@ fn parse_array() {
 fn parse_object() {
 	if let Value::Object(_) =
 		Value::parse("{foo: 3, bar: 6, baz: false}").unwrap().1
+	{
+	} else {
+		panic!();
+	}
+}
+
+#[test]
+fn parse_function() {
+	if let Value::Function(_) =
+		Value::parse("a b -> math.sqrt( a*a + b*b )").unwrap().1
 	{
 	} else {
 		panic!();
