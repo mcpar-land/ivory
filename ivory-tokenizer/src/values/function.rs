@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -28,6 +30,13 @@ impl Parse for FunctionValue {
 				expr: Box::new(expr),
 			},
 		)(input)
+	}
+}
+
+impl Display for FunctionValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		// TODO
+		write!(f, "function()")
 	}
 }
 

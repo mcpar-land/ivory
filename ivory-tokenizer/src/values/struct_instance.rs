@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use nom::{
 	bytes::complete::tag,
@@ -52,5 +52,12 @@ impl Parse for StructInstance {
 			separated_pair(StructName::parse, multispace0, parse_values)(input)?;
 
 		Ok((input, StructInstance { name, values }))
+	}
+}
+
+impl Display for StructInstance {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		// TODO
+		write!(f, "{{{}}}", self.name)
 	}
 }

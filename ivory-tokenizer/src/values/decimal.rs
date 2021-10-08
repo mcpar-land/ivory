@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	character::complete::{char, digit1},
@@ -20,6 +22,12 @@ impl Parse for DecimalValue {
 			alt((decimal, recognize(pair(char('-'), decimal)))),
 			|input: &str| DecimalValue(input.parse::<f64>().unwrap()),
 		)(input)
+	}
+}
+
+impl Display for DecimalValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
 	}
 }
 

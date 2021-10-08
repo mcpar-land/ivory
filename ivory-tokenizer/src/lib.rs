@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 pub use module::Module;
 pub use nom::error::ErrorKind;
@@ -14,7 +14,7 @@ pub mod util;
 pub mod values;
 pub mod variable;
 
-pub trait Parse: Sized + Clone + Debug {
+pub trait Parse: Sized + Clone + Debug + Display {
 	fn parse(input: &str) -> IResult<&str, Self>;
 }
 

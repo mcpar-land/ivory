@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	character::complete::{char, multispace0, multispace1},
@@ -27,6 +29,12 @@ impl Parse for Variable {
 	}
 }
 
+impl Display for Variable {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} = {}", self.name, self.value)
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableName(pub String);
 
@@ -34,6 +42,12 @@ impl Parse for VariableName {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		let (input, val) = variable_name(input)?;
 		Ok((input, Self(val.to_string())))
+	}
+}
+
+impl Display for VariableName {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
 	}
 }
 

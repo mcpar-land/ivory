@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use nom::{
 	bytes::complete::tag,
@@ -42,6 +42,12 @@ impl Parse for StructDefinition {
 	}
 }
 
+impl Display for StructDefinition {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		todo!()
+	}
+}
+
 #[derive(Clone, Debug)]
 pub enum StructDefinitionValue {
 	Value(Value),
@@ -54,6 +60,12 @@ impl Parse for StructDefinitionValue {
 	}
 }
 
+impl Display for StructDefinitionValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		todo!()
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StructName(String);
 
@@ -61,5 +73,11 @@ impl Parse for StructName {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		let (input, val) = variable_name(input)?;
 		Ok((input, Self(val.to_string())))
+	}
+}
+
+impl Display for StructName {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
 	}
 }

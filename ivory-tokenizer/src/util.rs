@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -31,7 +33,7 @@ pub fn variable_name(input: &str) -> IResult<&str, &str> {
 pub fn test_multiple<'a, T: Parse>(inputs: &[&'a str]) {
 	for input in inputs {
 		match T::parse(input) {
-			Ok(val) => println!("{:?}", val),
+			Ok(val) => println!("{}", val.1),
 			Err(err) => panic!("Error parsing \"{}\" -> {:?}", input, err),
 		}
 	}
@@ -43,6 +45,12 @@ pub fn test_multiple_should_fail<'a, T: Parse>(inputs: &[&'a str]) {
 			panic!("Expected error parsing \"{}\", got Ok", input);
 		}
 	}
+}
+
+pub fn comma_separated_display<T: Display>(vec: &Vec<T>) -> String {
+	vec.iter().enumerate().fold(String::new(), |s, (i, v)| {
+		format!("{}{}{}", s, v, if i == vec.len() - 1 { "" } else { ", " })
+	})
 }
 
 #[cfg(test)]

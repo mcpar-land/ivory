@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	bytes::complete::{escaped, is_not, take_until},
@@ -66,6 +68,13 @@ impl Parse for StringValue {
 		map(delimited(char('"'), build_string, char('"')), |s| {
 			StringValue(s)
 		})(input)
+	}
+}
+
+impl Display for StringValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		// TODO escapify string
+		write!(f, "\"{}\"", self.0)
 	}
 }
 

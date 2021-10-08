@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	character::complete::{char, multispace0},
@@ -6,7 +8,10 @@ use nom::{
 	sequence::{delimited, pair, preceded},
 };
 
-use crate::{expression::Expression, variable::VariableName, Parse};
+use crate::{
+	expression::Expression, util::comma_separated_display,
+	variable::VariableName, Parse,
+};
 
 #[derive(Clone, Debug)]
 pub struct Accessor(pub VariableName, pub Vec<AccessorComponent>);
@@ -20,6 +25,20 @@ impl Parse for Accessor {
 		map(pair(first, afters), |(first, afters)| {
 			Accessor(first, afters)
 		})(input)
+	}
+}
+
+impl Display for Accessor {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}{}",
+			self.0,
+			self
+				.1
+				.iter()
+				.fold(String::new(), |s, v| { format!("{}{}", s, v) })
+		)
 	}
 }
 
@@ -57,6 +76,16 @@ impl Parse for AccessorComponent {
 		);
 
 		alt((property, index, call))(input)
+	}
+}
+
+impl Display for AccessorComponent {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			AccessorComponent::Property(p) => write!(f, ".{}", p),
+			AccessorComponent::Index(i) => write!(f, "[{}]", i),
+			AccessorComponent::Call(c) => write!(f, "{}", comma_separated_display(c)),
+		}
 	}
 }
 

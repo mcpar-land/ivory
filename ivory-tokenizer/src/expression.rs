@@ -1,6 +1,8 @@
 pub mod dice_ops;
 pub mod math;
 
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -12,6 +14,7 @@ use nom::{
 
 use crate::{
 	accessor::Accessor,
+	expression::math::ExprOpMathKind,
 	values::{integer::IntegerValue, Value},
 	Parse,
 };
@@ -49,6 +52,15 @@ impl Expression {
 			}
 		})
 	}
+
+	pub fn iter_operations(&self) -> OperationIterator<'_> {
+		OperationIterator {
+			first: Some(&self.first),
+			pairs: self.pairs.as_slice(),
+			parent: None,
+			..Default::default()
+		}
+	}
 }
 
 impl Parse for Expression {
@@ -58,6 +70,20 @@ impl Parse for Expression {
 			many0(preceded(multispace0, ExpressionPair::parse))(input)?;
 
 		Ok((input, Self { first, pairs }))
+	}
+}
+
+impl Display for Expression {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}{}",
+			self.first,
+			self
+				.pairs
+				.iter()
+				.fold(String::new(), |s, v| { format!("{} {}", s, v) })
+		)
 	}
 }
 
@@ -75,6 +101,16 @@ impl Parse for Op {
 			map(ExprOpMath::parse, |m| Op::Math(m)),
 			map(DiceOp::parse, |d| Op::DiceOp(d)),
 		))(input)
+	}
+}
+
+impl Display for Op {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Op::Dice => write!(f, "d"),
+			Op::Math(op) => write!(f, "{}", op),
+			Op::DiceOp(op) => write!(f, "{}", op),
+		}
 	}
 }
 
@@ -106,6 +142,16 @@ impl Parse for ExpressionComponent {
 	}
 }
 
+impl Display for ExpressionComponent {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			ExpressionComponent::Value(v) => write!(f, "{}", v),
+			ExpressionComponent::Accessor(a) => write!(f, "{}", a),
+			ExpressionComponent::Paren(p) => write!(f, "({})", p),
+		}
+	}
+}
+
 #[derive(Clone, Debug)]
 pub struct ExpressionPair {
 	pub op: Op,
@@ -121,9 +167,10 @@ impl Parse for ExpressionPair {
 	}
 }
 
-pub enum ExpressionItem<'a> {
-	First(&'a ExpressionComponent),
-	Pair(&'a ExpressionComponent),
+impl Display for ExpressionPair {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} {}", self.op, self.component)
+	}
 }
 
 pub struct ExpressionIterator<'a> {
@@ -178,6 +225,125 @@ impl<'a> Default for ExpressionIterator<'a> {
 	}
 }
 
+#[derive(Debug)]
+pub struct OperationIterator<'a> {
+	first: Option<&'a ExpressionComponent>,
+	pairs: &'a [ExpressionPair],
+	parent: Option<Box<OperationIterator<'a>>>,
+	did_first_paren: bool,
+}
+
+impl<'a> OperationIterator<'a> {
+	fn move_into_paren(&mut self, first: bool) -> bool {
+		let possible_paren = if first {
+			self.pairs.get(0)
+		} else {
+			self.pairs.get(1)
+		};
+		if let Some(ExpressionPair {
+			component: ExpressionComponent::Paren(paren),
+			..
+		}) = possible_paren
+		{
+			println!("Moving into a paren...");
+			self.pairs = &self.pairs[1..];
+			*self = OperationIterator {
+				first: Some(&paren.first),
+				pairs: paren.pairs.as_slice(),
+				parent: Some(Box::new(std::mem::take(self))),
+				..Default::default()
+			};
+			true
+		} else {
+			false
+		}
+	}
+}
+
+impl<'a> Iterator for OperationIterator<'a> {
+	type Item = (&'a ExpressionComponent, &'a Op, &'a ExpressionComponent);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		println!(
+			"RUNNING NEXT ON: {:?} {}",
+			self.first,
+			self
+				.pairs
+				.iter()
+				.fold(String::new(), |s, v| { format!("{} {}", s, v) })
+		);
+		if let Some(first) = self.first {
+			if matches!(first, ExpressionComponent::Paren(_)) && !self.did_first_paren
+			{
+				if let ExpressionComponent::Paren(first_paren) = first {
+					self.did_first_paren = true;
+					*self = OperationIterator {
+						first: Some(&first_paren.first),
+						pairs: first_paren.pairs.as_slice(),
+						parent: Some(Box::new(std::mem::take(self))),
+						..Default::default()
+					};
+					self.next()
+				} else {
+					unreachable!()
+				}
+			} else {
+				self.first = None;
+				if let Some(pair) = self.pairs.get(0) {
+					println!("got ({} {} {})", first, pair.op, pair.component);
+					self.move_into_paren(true);
+					Some((first, &pair.op, &pair.component))
+				} else {
+					match self.parent.take() {
+						Some(parent) => {
+							*self = *parent;
+							self.next()
+						}
+						None => None,
+					}
+				}
+			}
+		} else {
+			match (&self.pairs.get(0), &self.pairs.get(1)) {
+				// two consecutive pairs
+				(
+					Some(ExpressionPair {
+						op: _,
+						component: lhs,
+					}),
+					Some(ExpressionPair { op, component: rhs }),
+				) => {
+					println!("got ({} {} {})", lhs, op, rhs);
+					if !self.move_into_paren(false) {
+						self.pairs = &self.pairs[1..];
+					}
+					Some((lhs, op, rhs))
+				}
+				(None, Some(_)) => unreachable!(),
+				// end of expression
+				_ => match self.parent.take() {
+					Some(parent) => {
+						*self = *parent;
+						self.next()
+					}
+					None => None,
+				},
+			}
+		}
+	}
+}
+
+impl<'a> Default for OperationIterator<'a> {
+	fn default() -> Self {
+		Self {
+			first: None,
+			pairs: &[],
+			parent: None,
+			did_first_paren: false,
+		}
+	}
+}
+
 #[cfg(test)]
 #[test]
 fn parse_expression() {
@@ -227,4 +393,66 @@ fn expression_iterator() {
 	assert(iter.next(), 2);
 	assert(iter.next(), 1);
 	assert(iter.next(), 69);
+}
+
+#[test]
+fn operation_iterator() {
+	use ExprOpMathKind::*;
+
+	fn test_op_iterator(
+		expr: &str,
+		checks: &[(Option<i64>, ExprOpMathKind, Option<i64>)],
+	) {
+		let expr = Expression::parse(expr).unwrap().1;
+		let mut iter = expr.iter_operations();
+		for (lhs, op, rhs) in checks {
+			match iter.next() {
+				Some((
+					&ExpressionComponent::Value(Value::Integer(IntegerValue(v_lhs))),
+					&Op::Math(ExprOpMath { kind: v_op, .. }),
+					&ExpressionComponent::Value(Value::Integer(IntegerValue(v_rhs))),
+				)) => {
+					if (*lhs, *op, *rhs) != (Some(v_lhs), v_op, Some(v_rhs)) {
+						panic!(
+							"Expected {:?} {:?} {:?}, got {} {:?} {}",
+							lhs, op, rhs, v_lhs, v_op, v_rhs
+						);
+					}
+				}
+				Some((
+					&ExpressionComponent::Value(Value::Integer(IntegerValue(v_lhs))),
+					&Op::Math(ExprOpMath { kind: v_op, .. }),
+					&ExpressionComponent::Paren(_),
+				)) => {}
+				Some((
+					&ExpressionComponent::Paren(_),
+					&Op::Math(ExprOpMath { kind: v_op, .. }),
+					&ExpressionComponent::Value(Value::Integer(IntegerValue(v_rhs))),
+				)) => {}
+				_ => {
+					panic!("Expected {:?} {:?} {:?}, got", lhs, op, rhs);
+				}
+			};
+		}
+		assert!(matches!(iter.next(), None));
+	}
+
+	test_op_iterator(
+		"(3 * 3) * 4 + 13 - (6 * 6 * 6) / 4 + (3 + (2 + (1))) + 69",
+		&[
+			(Some(3), Mul, Some(3)),
+			(None, Mul, Some(4)),
+			(Some(4), Add, Some(13)),
+			(Some(13), Sub, None),
+			(Some(6), Mul, Some(6)),
+			(Some(6), Mul, Some(6)),
+			(None, Div, Some(4)),
+			(Some(4), Add, None),
+			(Some(3), Add, None),
+			(Some(2), Add, None),
+			(None, Add, Some(69)),
+		],
+	);
+	test_op_iterator("((((((((((2 + 2))))))))))", &[(Some(2), Add, Some(2))]);
+	test_op_iterator("99 / 99", &[(Some(99), Div, Some(99))]);
 }

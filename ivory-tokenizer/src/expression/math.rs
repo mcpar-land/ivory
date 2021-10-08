@@ -42,6 +42,21 @@ impl Parse for ExprOpMathKind {
 	}
 }
 
+impl Display for ExprOpMathKind {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}",
+			match self {
+				Self::Add => "+",
+				Self::Sub => "-",
+				Self::Mul => "*",
+				Self::Div => "/",
+			}
+		)
+	}
+}
+
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub enum ExprOpMathRound {
 	Up,
@@ -64,25 +79,25 @@ impl Parse for ExprOpMathRound {
 	}
 }
 
-impl Display for ExprOpMath {
+impl Display for ExprOpMathRound {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(
 			f,
-			"{}{}",
-			match self.kind {
-				ExprOpMathKind::Add => "+",
-				ExprOpMathKind::Sub => "-",
-				ExprOpMathKind::Mul => "*",
-				ExprOpMathKind::Div => "/",
-			},
-			match &self.round {
-				Some(round) => match round {
-					ExprOpMathRound::Up => "^",
-					ExprOpMathRound::Down => "_",
-					ExprOpMathRound::Round => "~",
-				},
-				None => "",
+			"{}",
+			match self {
+				Self::Up => "^",
+				Self::Down => "_",
+				Self::Round => "~",
 			}
 		)
+	}
+}
+
+impl Display for ExprOpMath {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self.round {
+			Some(round) => write!(f, "{}{}", self.kind, round),
+			None => write!(f, "{}", self.kind),
+		}
 	}
 }

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -40,6 +42,12 @@ impl Parse for DiceOp {
 	}
 }
 
+impl Display for DiceOp {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}{}", self.op, self.cmp)
+	}
+}
+
 impl Parse for DiceOpCmp {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		alt((
@@ -61,5 +69,37 @@ impl Parse for DiceCmp {
 			value(DiceCmp::Gt, tag(">")),
 			value(DiceCmp::Lt, tag("<")),
 		))(input)
+	}
+}
+
+impl Display for DiceOpCmp {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}",
+			match self {
+				DiceOpCmp::Keep => "k",
+				DiceOpCmp::Reroll => "r",
+				DiceOpCmp::RerollContinuous => "rr",
+				DiceOpCmp::Explode => "!",
+				DiceOpCmp::ExplodeContinuous => "!!",
+			}
+		)
+	}
+}
+
+impl Display for DiceCmp {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}",
+			match self {
+				DiceCmp::Gt => ">",
+				DiceCmp::Lt => "<",
+				DiceCmp::Eq => "==",
+				DiceCmp::GtEq => ">=",
+				DiceCmp::LtEq => "<=",
+			}
+		)
 	}
 }

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	character::complete::multispace0,
 	combinator::map,
@@ -16,5 +18,18 @@ impl Parse for Module {
 			preceded(multispace0, many1(terminated(Command::parse, multispace0))),
 			|v| Self(v),
 		)(input)
+	}
+}
+
+impl Display for Module {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{}",
+			self
+				.0
+				.iter()
+				.fold(String::new(), |s, val| { format!("{}\n{}", s, val) })
+		)
 	}
 }

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{branch::alt, bytes::complete::tag, combinator::map};
 
 use crate::Parse;
@@ -11,6 +13,12 @@ impl Parse for BooleanValue {
 			map(tag("true"), |_| BooleanValue(true)),
 			map(tag("false"), |_| BooleanValue(false)),
 		))(input)
+	}
+}
+
+impl Display for BooleanValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", if self.0 { "true" } else { "false" })
 	}
 }
 

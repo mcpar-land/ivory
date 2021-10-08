@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	combinator::{map, value},
@@ -44,6 +46,21 @@ impl Parse for Value {
 			map(ObjectValue::parse, |v| Self::Object(v)),
 			map(StructInstance::parse, |v| Self::Struct(v)),
 		))(input)
+	}
+}
+
+impl Display for Value {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Value::Boolean(v) => write!(f, "{}", v),
+			Value::Decimal(v) => write!(f, "{}", v),
+			Value::Integer(v) => write!(f, "{}", v),
+			Value::String(v) => write!(f, "{}", v),
+			Value::Array(v) => write!(f, "{}", v),
+			Value::Object(v) => write!(f, "{}", v),
+			Value::Struct(v) => write!(f, "{}", v),
+			Value::Function(v) => write!(f, "{}", v),
+		}
 	}
 }
 

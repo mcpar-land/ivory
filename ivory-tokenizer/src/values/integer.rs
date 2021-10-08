@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	character::complete::{char, digit1},
@@ -20,6 +22,12 @@ impl Parse for IntegerValue {
 		let (input, _) = not(char('.'))(input)?;
 
 		Ok((input, res))
+	}
+}
+
+impl Display for IntegerValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
 	}
 }
 

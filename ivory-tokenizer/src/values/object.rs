@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use nom::{
 	bytes::complete::tag,
@@ -39,6 +39,12 @@ impl Parse for ObjectValue {
 		}
 
 		Ok((input, ObjectValue(map)))
+	}
+}
+
+impl Display for ObjectValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{{object}}")
 	}
 }
 

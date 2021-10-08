@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -7,7 +9,7 @@ use nom::{
 	sequence::{delimited, pair, tuple},
 };
 
-use crate::{expression::Expression, Parse};
+use crate::{expression::Expression, util::comma_separated_display, Parse};
 
 #[derive(Clone, Debug)]
 pub struct ArrayValue(pub Vec<Expression>);
@@ -31,6 +33,12 @@ impl Parse for ArrayValue {
 				|v| ArrayValue(v),
 			),
 		))(input)
+	}
+}
+
+impl Display for ArrayValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "[{}]", comma_separated_display(&self.0))
 	}
 }
 
