@@ -1,20 +1,22 @@
+pub mod dice_ops;
 pub mod math;
 
 use nom::{
 	branch::alt,
+	bytes::complete::tag,
 	character::complete::{char, multispace0},
-	combinator::map,
+	combinator::{map, value},
 	multi::{many0, separated_list0},
 	sequence::{delimited, pair, preceded, separated_pair},
 };
 
 use crate::{
 	accessor::Accessor,
-	values::{dice::Dice, integer::IntegerValue, Value},
+	values::{integer::IntegerValue, Value},
 	Parse,
 };
 
-use self::math::ExprOpMath;
+use self::{dice_ops::DiceOp, math::ExprOpMath};
 
 #[derive(Clone, Debug)]
 pub struct Expression {
@@ -34,22 +36,10 @@ impl Expression {
 		ExpressionIterator {
 			first: Some(&self.first),
 			pairs: self.pairs.as_slice(),
-			in_op: false,
 			parent: None,
 		}
 	}
 
-	pub fn iter_dice(&self) -> impl Iterator<Item = &Dice> {
-		self.iter().filter_map(|c| {
-			if let ExpressionComponent::Value(Value::Dice(dice)) = c {
-				Some(dice)
-			} else {
-				None
-			}
-		})
-	}
-
-	/// If there's a single accessor anywhere in here
 	pub fn iter_accessors(&self) -> impl Iterator<Item = &Accessor> {
 		self.iter().filter_map(|c| {
 			if let ExpressionComponent::Accessor(acc) = c {
@@ -68,6 +58,23 @@ impl Parse for Expression {
 			many0(preceded(multispace0, ExpressionPair::parse))(input)?;
 
 		Ok((input, Self { first, pairs }))
+	}
+}
+
+#[derive(Clone, Debug)]
+pub enum Op {
+	Dice,
+	Math(ExprOpMath),
+	DiceOp(DiceOp),
+}
+
+impl Parse for Op {
+	fn parse(input: &str) -> nom::IResult<&str, Self> {
+		alt((
+			value(Op::Dice, tag("d")),
+			map(ExprOpMath::parse, |m| Op::Math(m)),
+			map(DiceOp::parse, |d| Op::DiceOp(d)),
+		))(input)
 	}
 }
 
@@ -101,18 +108,14 @@ impl Parse for ExpressionComponent {
 
 #[derive(Clone, Debug)]
 pub struct ExpressionPair {
-	pub op: ExprOpMath,
+	pub op: Op,
 	pub component: ExpressionComponent,
 }
 
 impl Parse for ExpressionPair {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		map(
-			separated_pair(
-				ExprOpMath::parse,
-				multispace0,
-				ExpressionComponent::parse,
-			),
+			separated_pair(Op::parse, multispace0, ExpressionComponent::parse),
 			|(op, component)| ExpressionPair { op, component },
 		)(input)
 	}
@@ -126,7 +129,6 @@ pub enum ExpressionItem<'a> {
 pub struct ExpressionIterator<'a> {
 	first: Option<&'a ExpressionComponent>,
 	pairs: &'a [ExpressionPair],
-	in_op: bool,
 	parent: Option<Box<ExpressionIterator<'a>>>,
 }
 
@@ -152,7 +154,6 @@ impl<'a> Iterator for ExpressionIterator<'a> {
 						*self = ExpressionIterator {
 							first: Some(&paren.first),
 							pairs: paren.pairs.as_slice(),
-							in_op: false,
 							parent: Some(Box::new(std::mem::take(self))),
 						};
 						self.next()
@@ -172,7 +173,6 @@ impl<'a> Default for ExpressionIterator<'a> {
 		Self {
 			first: None,
 			pairs: &[],
-			in_op: false,
 			parent: None,
 		}
 	}

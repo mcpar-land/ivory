@@ -1,0 +1,59 @@
+
+(* This is just a pseudocode EBNF notation document that holds a general overview of the language. *)
+
+program = { assignment, ws } ;
+
+assignment = symbol, ws, "=", ws, expression, ws, ";";
+
+(* expression *)
+
+expression = expression_component, { ws, op, ws, expression_component, ws } ;
+
+expression_component = value | accessor | "(", ws, expression, ws, ")" ;
+
+(* values *)
+
+value = decimal | number | boolean | string | array | object | fxn ;
+
+decimal = number , ".", number ;
+number = digit, { digit } ;
+boolean = "true" | "false" ;
+string =  '"', ? all characters ?, '"' ;
+
+array = "[", ws, [ expression, ws, { ",", ws, expression, ws } ], ws, "]" ;
+
+object = "{", ws, [ object_pair, ws, { ",", ws, object_pair, ws } ], ws, "}" ;
+object_pair = symbol, ws, ":", ws, expression;
+
+fxn = "(", ws, [ symbol, ws, { ",", ws, symbol, ws } ], ws, ")", ws, "->",
+	ws, expression;
+
+(* accessor *)
+
+accessor = accessor_item, { "." , accessor_item };
+accessor_item = symbol | fxn_call | index ;
+fxn_call =  "(", ws, [ expression, ws, { ",", ws, expression, ws } ], ws, ")" ;
+index = "[", ws, expression, ws, "]" ;
+
+(* basics *)
+
+op = "d" | op_dice | op_math ;
+
+op_dice = op_dice_mod, [compare] ;
+op_dice_mod = "s" | "f" | "k" | "!" | "!!" | "r" | "rr" ;
+
+op_math = [ op_math_round ] , op_math_sign;
+op_math_sign = "+" | "-" | "*" | "/";
+op_math_round = "_" | "~" | "^";
+
+
+
+symbol = letter , { char } ;
+
+compare = "<" | ">" | "<=" | ">=" | "==" ;
+
+char = letter | digit | "_";
+
+letter = ? all letters ? ;
+digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
+ws = { " " | "\t" | "\n" } ;
