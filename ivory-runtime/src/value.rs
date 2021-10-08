@@ -3,8 +3,10 @@ use ivory_tokenizer::{
 	values::function::FunctionValue,
 };
 
-use crate::error::RuntimeError;
 use crate::Result;
+use crate::{error::RuntimeError, roll::Roll};
+use lazy_static::lazy_static;
+use prec::{Assoc, Climber, Rule, Token};
 use std::{collections::HashMap, fmt::Display};
 
 static K_INTEGER: &'static str = "int";
@@ -29,16 +31,16 @@ pub enum Value {
 }
 
 impl Value {
-	pub fn kind_str(&self) -> &'static str {
+	pub fn kind(&self) -> ValueKind {
 		match self {
-			Value::Integer(_) => K_INTEGER,
-			Value::Decimal(_) => K_DECIMAL,
-			Value::Boolean(_) => K_BOOLEAN,
-			Value::String(_) => K_STRING,
-			Value::Roll(_) => K_ROLL,
-			Value::Array(_) => K_ARRAY,
-			Value::Object(_) => K_OBJECT,
-			Value::Function(_) => K_FUNCTION,
+			Value::Integer(_) => ValueKind::Integer,
+			Value::Decimal(_) => ValueKind::Decimal,
+			Value::Boolean(_) => ValueKind::Boolean,
+			Value::String(_) => ValueKind::String,
+			Value::Roll(_) => ValueKind::Roll,
+			Value::Array(_) => ValueKind::Array,
+			Value::Object(_) => ValueKind::Object,
+			Value::Function(_) => ValueKind::Function,
 		}
 	}
 
@@ -71,12 +73,40 @@ impl Value {
 			(Roll(a), String(b)) => todo!(),
 			(Roll(a), Roll(b)) => todo!(),
 			(Array(a), Array(b)) => a.op(b, op),
-			(a, b) => Err(RuntimeError::CannotRunOp(
-				a.kind_str(),
-				op.clone(),
-				b.kind_str(),
-			)),
+			(a, b) => Err(RuntimeError::CannotRunOp(a.kind(), op.clone(), b.kind())),
 		}
+	}
+
+	pub fn to_integer(&self) -> Result<i32> {
+		todo!();
+	}
+
+	pub fn to_decimal(&self) -> Result<f32> {
+		todo!();
+	}
+
+	pub fn to_boolean(&self) -> Result<bool> {
+		todo!();
+	}
+
+	pub fn to_string(&self) -> Result<bool> {
+		todo!();
+	}
+
+	pub fn to_roll(&self) -> Result<Roll> {
+		todo!();
+	}
+
+	pub fn to_array(&self) -> Result<Vec<Value>> {
+		todo!();
+	}
+
+	pub fn to_object(&self) -> Result<HashMap<String, Value>> {
+		todo!();
+	}
+
+	pub fn to_function(&self) -> Result<FunctionValue> {
+		todo!();
 	}
 }
 
@@ -97,7 +127,7 @@ impl PartialEq for Value {
 	}
 }
 
-fn same_op_err(kind: &'static str, op: &ExprOpMath) -> Result<Value> {
+fn same_op_err(kind: ValueKind, op: &ExprOpMath) -> Result<Value> {
 	Err(RuntimeError::CannotRunOp(kind, op.clone(), kind))
 }
 
@@ -148,7 +178,7 @@ impl RunOp for String {
 	fn op(&self, other: &Self, op: &ExprOpMath) -> Result<Value> {
 		match op.kind {
 			ExprOpMathKind::Add => Ok(Value::String(format!("{}{}", self, other))),
-			_ => same_op_err(K_STRING, op),
+			_ => same_op_err(ValueKind::String, op),
 		}
 	}
 }
@@ -159,8 +189,103 @@ impl RunOp for Vec<Value> {
 			ExprOpMathKind::Add => {
 				Ok(Value::Array([self.as_slice(), other.as_slice()].concat()))
 			}
-			_ => same_op_err(K_ARRAY, op),
+			_ => same_op_err(ValueKind::Array, op),
 		}
+	}
+}
+
+#[derive(Clone, Debug)]
+pub enum ExprVal {
+	Value(Value),
+	Paren(Box<prec::Expression<ExprOpMath, ExprVal>>),
+}
+
+impl prec::Token<Value, RuntimeError> for ExprVal {
+	fn convert(self, ctx: &()) -> Result<Value> {
+		Ok(match self {
+			ExprVal::Paren(expr) => PREC_CLIMBER.process(expr.as_ref(), &())?,
+			ExprVal::Value(v) => v,
+		})
+	}
+}
+
+fn prec_handler(
+	lhs: ExprVal,
+	op: ExprOpMath,
+	rhs: ExprVal,
+	_: &(),
+) -> Result<ExprVal> {
+	let lhs = lhs.convert(&())?;
+	let rhs = rhs.convert(&())?;
+	Ok(ExprVal::Value(lhs.run_op(&rhs, &op)?))
+}
+
+fn every_rule(src: ExprOpMathKind) -> Rule<ExprOpMath> {
+	let mut r = Rule::new(
+		ExprOpMath {
+			kind: src,
+			round: None,
+		},
+		Assoc::Left,
+	);
+	for round in [
+		ExprOpMathRound::Down,
+		ExprOpMathRound::Up,
+		ExprOpMathRound::Round,
+	] {
+		r = r
+			| Rule::new(
+				ExprOpMath {
+					kind: src,
+					round: Some(round),
+				},
+				Assoc::Left,
+			);
+	}
+	r
+}
+
+lazy_static! {
+	pub static ref PREC_CLIMBER: Climber<ExprOpMath, ExprVal, Value, RuntimeError> =
+		Climber::new(
+			vec![
+				every_rule(ExprOpMathKind::Add) | every_rule(ExprOpMathKind::Sub),
+				every_rule(ExprOpMathKind::Mul) | every_rule(ExprOpMathKind::Div)
+			],
+			prec_handler
+		);
+}
+
+#[derive(Clone, Debug, Copy)]
+pub enum ValueKind {
+	Integer,
+	Decimal,
+	Boolean,
+	String,
+	Roll,
+	Array,
+	Object,
+	Function,
+}
+
+impl ValueKind {
+	pub fn to_str(&self) -> &'static str {
+		match self {
+			ValueKind::Integer => K_INTEGER,
+			ValueKind::Decimal => K_DECIMAL,
+			ValueKind::Boolean => K_BOOLEAN,
+			ValueKind::String => K_STRING,
+			ValueKind::Roll => K_ROLL,
+			ValueKind::Array => K_ARRAY,
+			ValueKind::Object => K_OBJECT,
+			ValueKind::Function => K_FUNCTION,
+		}
+	}
+}
+
+impl Display for ValueKind {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.to_str())
 	}
 }
 

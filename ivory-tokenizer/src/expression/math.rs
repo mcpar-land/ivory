@@ -4,7 +4,7 @@ use nom::{character::complete::one_of, combinator::opt};
 
 use crate::Parse;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub struct ExprOpMath {
 	pub kind: ExprOpMathKind,
 	pub round: Option<ExprOpMathRound>,
@@ -18,7 +18,7 @@ impl Parse for ExprOpMath {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub enum ExprOpMathKind {
 	Add,
 	Sub,
@@ -42,7 +42,7 @@ impl Parse for ExprOpMathKind {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub enum ExprOpMathRound {
 	Up,
 	Down,

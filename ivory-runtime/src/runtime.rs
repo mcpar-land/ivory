@@ -32,12 +32,16 @@ impl Runtime {
 		&self,
 		ctx: &RuntimeContext,
 		Accessor(var, components): &Accessor,
-	) -> Result<()> {
+	) -> Result<Value> {
 		let param_value = ctx.params.get(&var.0);
 		todo!();
 	}
 
-	pub fn execute(&self, ctx: &RuntimeContext, expr: &Expression) -> Result<()> {
+	pub fn execute(
+		&self,
+		ctx: &RuntimeContext,
+		expr: &Expression,
+	) -> Result<Value> {
 		todo!();
 	}
 }
