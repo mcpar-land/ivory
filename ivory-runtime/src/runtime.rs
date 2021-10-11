@@ -68,18 +68,17 @@ impl Runtime {
 		ctx: &RuntimeContext,
 		expr: &Expression<Op, Value>,
 	) -> Result<Expression<ExprOpMath, Value>> {
-		let rolled = expr.collapse::<_, RuntimeError>(|lhs, op, rhs| {
-			if let Op::Dice = op {
+		let rolled = expr.collapse::<_, RuntimeError>(|lhs, op, rhs| match op {
+			Op::Dice => {
 				let lhs = match lhs {
 					ivory_expression::ExpressionComponent::Token(val) => Ok(val.clone()),
 					ivory_expression::ExpressionComponent::Paren(paren) => {
 						self.evaluate(ctx, paren.as_ref())
 					}
-				};
+				}?;
 				todo!();
-			} else {
-				Ok(true)
 			}
+			_ => Ok(true),
 		})?;
 
 		todo!();
