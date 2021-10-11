@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use ivory_expression::Expression;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -9,10 +10,14 @@ use nom::{
 	sequence::{delimited, pair, tuple},
 };
 
-use crate::{expression::Expression, util::comma_separated_display, Parse};
+use crate::{
+	expression::{ExpressionToken, Op},
+	util::comma_separated_display,
+	Parse,
+};
 
 #[derive(Clone, Debug)]
-pub struct ArrayValue(pub Vec<Expression>);
+pub struct ArrayValue(pub Vec<Expression<Op, ExpressionToken>>);
 
 impl Parse for ArrayValue {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {

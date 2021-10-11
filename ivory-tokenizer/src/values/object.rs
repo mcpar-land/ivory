@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
+use ivory_expression::Expression;
 use nom::{
 	bytes::complete::tag,
 	character::complete::multispace0,
@@ -7,14 +8,23 @@ use nom::{
 	sequence::{delimited, pair, separated_pair, tuple},
 };
 
-use crate::{expression::Expression, variable::VariableName, Parse};
+use crate::{
+	expression::{ExpressionToken, Op},
+	variable::VariableName,
+	Parse,
+};
 
 #[derive(Clone, Debug)]
-pub struct ObjectValue(pub HashMap<VariableName, Expression>);
+pub struct ObjectValue(
+	pub HashMap<VariableName, Expression<Op, ExpressionToken>>,
+);
 
 impl Parse for ObjectValue {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		let (input, pairs): (&str, Vec<(VariableName, Expression)>) = delimited(
+		let (input, pairs): (
+			&str,
+			Vec<(VariableName, Expression<Op, ExpressionToken>)>,
+		) = delimited(
 			pair(tag("{"), multispace0),
 			separated_list0(
 				tuple((multispace0, tag(","), multispace0)),

@@ -1,6 +1,10 @@
 use crate::{value::Value, Result};
+use ivory_expression::Expression;
 use ivory_tokenizer::{
-	accessor::Accessor, expression::Expression, tokenize, variable::Variable,
+	accessor::Accessor,
+	expression::{ExpressionToken, Op},
+	tokenize,
+	variable::Variable,
 };
 use std::collections::BTreeMap;
 
@@ -40,7 +44,7 @@ impl Runtime {
 	pub fn execute(
 		&self,
 		ctx: &RuntimeContext,
-		expr: &Expression,
+		expr: &Expression<Op, ExpressionToken>,
 	) -> Result<Value> {
 		todo!();
 	}

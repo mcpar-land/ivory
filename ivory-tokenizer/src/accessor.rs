@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use ivory_expression::Expression;
 use nom::{
 	branch::alt,
 	character::complete::{char, multispace0},
@@ -9,8 +10,10 @@ use nom::{
 };
 
 use crate::{
-	expression::Expression, util::comma_separated_display,
-	variable::VariableName, Parse,
+	expression::{ExpressionToken, Op},
+	util::comma_separated_display,
+	variable::VariableName,
+	Parse,
 };
 
 #[derive(Clone, Debug)]
@@ -45,8 +48,8 @@ impl Display for Accessor {
 #[derive(Clone, Debug)]
 pub enum AccessorComponent {
 	Property(VariableName),
-	Index(Expression),
-	Call(Vec<Expression>),
+	Index(Expression<Op, ExpressionToken>),
+	Call(Vec<Expression<Op, ExpressionToken>>),
 }
 
 impl Parse for AccessorComponent {
@@ -58,7 +61,7 @@ impl Parse for AccessorComponent {
 		let index = map(
 			delimited(
 				pair(char('['), multispace0),
-				Expression::parse,
+				Expression::<Op, ExpressionToken>::parse,
 				pair(multispace0, char(']')),
 			),
 			|e| AccessorComponent::Index(e),
@@ -68,7 +71,7 @@ impl Parse for AccessorComponent {
 				pair(char('('), multispace0),
 				separated_list0(
 					delimited(multispace0, char(','), multispace0),
-					Expression::parse,
+					Expression::<Op, ExpressionToken>::parse,
 				),
 				pair(multispace0, char(')')),
 			),

@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 ivory-tokenizer = { path = "../ivory-tokenizer" }
+ivory-expression = { path = "../ivory-expression" }
 quick-error = "2.0.1"
 rand = "0.8.4"
 prec = "1.1.0"

@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use ivory_expression::Expression;
 use nom::{
 	branch::alt,
 	character::complete::{char, multispace0, multispace1},
@@ -8,12 +9,16 @@ use nom::{
 	sequence::{pair, preceded, separated_pair, terminated, tuple},
 };
 
-use crate::{expression::Expression, util::variable_name, Parse};
+use crate::{
+	expression::{ExpressionToken, Op},
+	util::variable_name,
+	Parse,
+};
 
 #[derive(Clone, Debug)]
 pub struct Variable {
 	pub name: VariableName,
-	pub value: Expression,
+	pub value: Expression<Op, ExpressionToken>,
 }
 
 impl Parse for Variable {

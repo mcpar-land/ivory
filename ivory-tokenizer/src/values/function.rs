@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use ivory_expression::Expression;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -9,12 +10,16 @@ use nom::{
 	sequence::{preceded, separated_pair, tuple},
 };
 
-use crate::{expression::Expression, variable::VariableName, Parse};
+use crate::{
+	expression::{ExpressionToken, Op},
+	variable::VariableName,
+	Parse,
+};
 
 #[derive(Clone, Debug)]
 pub struct FunctionValue {
 	pub args: Vec<VariableName>,
-	pub expr: Box<Expression>,
+	pub expr: Box<Expression<Op, ExpressionToken>>,
 }
 
 impl Parse for FunctionValue {
