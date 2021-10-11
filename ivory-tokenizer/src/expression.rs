@@ -87,7 +87,7 @@ impl Display for Expression {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Copy)]
 pub enum Op {
 	Dice,
 	Math(ExprOpMath),
@@ -358,6 +358,7 @@ fn parse_expression() {
 		"38 /^ 3",
 		"18 + bogos[34] / binted[8 * 8]",
 		"((((((((((((69))))))))))))",
+		"1d20 r<= 5",
 	]);
 }
 

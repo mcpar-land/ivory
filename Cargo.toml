@@ -3,5 +3,6 @@
 
 members = [
 	"ivory-tokenizer",
-	"ivory-runtime"
+	"ivory-runtime",
+	"ivory-expression"
 ]

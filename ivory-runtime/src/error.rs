@@ -1,4 +1,4 @@
-use ivory_tokenizer::{expression::math::ExprOpMath, ErrorKind};
+use ivory_tokenizer::{expression::Op, ErrorKind};
 use quick_error::quick_error;
 
 use crate::value::ValueKind;
@@ -12,7 +12,7 @@ quick_error! {
 			from()
 			display(s) -> ("Syntax error: {}", err)
 		}
-		CannotRunOp(lhs: ValueKind, op: ExprOpMath, rhs: ValueKind) {
+		CannotRunOp(lhs: ValueKind, op: Op, rhs: ValueKind) {
 			display(s) -> ("Cannot perform operation {} {} {}", lhs, op, rhs)
 		}
 		WrongExpectedValue(expected: ValueKind, got: ValueKind) {

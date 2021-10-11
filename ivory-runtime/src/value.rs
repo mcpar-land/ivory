@@ -1,10 +1,21 @@
 use ivory_tokenizer::{
-	expression::math::{ExprOpMath, ExprOpMathKind, ExprOpMathRound},
-	values::function::FunctionValue,
+	expression::{
+		math::{ExprOpMath, ExprOpMathKind, ExprOpMathRound},
+		Op,
+	},
+	values::{
+		array::ArrayValue, boolean::BooleanValue, decimal::DecimalValue,
+		function::FunctionValue, integer::IntegerValue, object::ObjectValue,
+		string::StringValue, struct_instance::StructInstance,
+	},
 };
 
-use crate::Result;
-use crate::{error::RuntimeError, roll::Roll};
+use crate::{
+	error::RuntimeError,
+	roll::Roll,
+	runtime::{Runtime, RuntimeContext},
+};
+use crate::{expr::RolledExprVal, Result};
 use lazy_static::lazy_static;
 use prec::{Assoc, Climber, Rule, Token};
 use std::{collections::HashMap, fmt::Display};
@@ -44,7 +55,7 @@ impl Value {
 		}
 	}
 
-	pub fn run_op(&self, rhs: &Value, op: &ExprOpMath) -> Result<Value> {
+	pub fn run_op(&self, rhs: &Value, op: &Op) -> Result<Value> {
 		use Value::*;
 		match (self, rhs) {
 			(Integer(a), Integer(b)) => a.op(b, op),
@@ -108,6 +119,39 @@ impl Value {
 	pub fn to_function(&self) -> Result<FunctionValue> {
 		todo!();
 	}
+
+	pub fn from_token(
+		token: &ivory_tokenizer::values::Value,
+		runtime: &Runtime,
+		ctx: &RuntimeContext,
+	) -> Result<Self> {
+		Ok(match token {
+			ivory_tokenizer::values::Value::Boolean(BooleanValue(v)) => {
+				Self::Boolean(*v)
+			}
+			ivory_tokenizer::values::Value::Decimal(DecimalValue(v)) => {
+				Self::Decimal(*v as f32)
+			}
+			ivory_tokenizer::values::Value::Integer(IntegerValue(v)) => {
+				Value::Integer(*v as i32)
+			}
+			ivory_tokenizer::values::Value::String(StringValue(v)) => {
+				Value::String(v.clone())
+			}
+			ivory_tokenizer::values::Value::Array(ArrayValue(v)) => Value::Array(
+				v.iter()
+					.map(|v| runtime.execute(ctx, v))
+					.collect::<Result<Vec<Value>>>()?,
+			),
+			ivory_tokenizer::values::Value::Object(ObjectValue(v)) => Value::Object(
+				v.iter()
+					.map(|(n, v)| Ok((n.0.clone(), runtime.execute(ctx, v)?)))
+					.collect::<Result<HashMap<String, Value>>>()?,
+			),
+			ivory_tokenizer::values::Value::Struct(s) => todo!(),
+			ivory_tokenizer::values::Value::Function(f) => Value::Function(f.clone()),
+		})
+	}
 }
 
 impl PartialEq for Value {
@@ -127,105 +171,102 @@ impl PartialEq for Value {
 	}
 }
 
-fn same_op_err(kind: ValueKind, op: &ExprOpMath) -> Result<Value> {
+fn same_op_err(kind: ValueKind, op: &Op) -> Result<Value> {
 	Err(RuntimeError::CannotRunOp(kind, op.clone(), kind))
 }
 
 trait RunOp {
-	fn op(&self, other: &Self, op: &ExprOpMath) -> Result<Value>;
+	fn op(&self, other: &Self, op: &Op) -> Result<Value>;
 }
 
 impl RunOp for i32 {
-	fn op(&self, other: &Self, op: &ExprOpMath) -> Result<Value> {
-		Ok(Value::Integer(match op.kind {
-			ExprOpMathKind::Add => self + other,
-			ExprOpMathKind::Sub => self - other,
-			ExprOpMathKind::Mul => self * other,
-			ExprOpMathKind::Div => match &op.round {
-				Some(round) => match round {
-					ExprOpMathRound::Up => (self + (other - 1)) / other,
-					ExprOpMathRound::Down => self / other,
-					ExprOpMathRound::Round => {
-						(*self as f32 / *other as f32).round() as i32
-					}
+	fn op(&self, other: &Self, op: &Op) -> Result<Value> {
+		Ok(Value::Integer(match op {
+			Op::Math(op) => match op.kind {
+				ExprOpMathKind::Add => self + other,
+				ExprOpMathKind::Sub => self - other,
+				ExprOpMathKind::Mul => self * other,
+				ExprOpMathKind::Div => match &op.round {
+					Some(round) => match round {
+						ExprOpMathRound::Up => (self + (other - 1)) / other,
+						ExprOpMathRound::Down => self / other,
+						ExprOpMathRound::Round => {
+							(*self as f32 / *other as f32).round() as i32
+						}
+					},
+					None => self / other,
 				},
-				None => self / other,
 			},
+			_ => return same_op_err(ValueKind::Integer, op),
 		}))
 	}
 }
 
 impl RunOp for f32 {
-	fn op(&self, other: &Self, op: &ExprOpMath) -> Result<Value> {
-		let res = match op.kind {
-			ExprOpMathKind::Add => self + other,
-			ExprOpMathKind::Sub => self - other,
-			ExprOpMathKind::Mul => self * other,
-			ExprOpMathKind::Div => self / other,
-		};
-		Ok(Value::Decimal(match &op.round {
-			Some(round) => match round {
-				ExprOpMathRound::Up => res.ceil(),
-				ExprOpMathRound::Down => res.floor(),
-				ExprOpMathRound::Round => res.round(),
-			},
-			None => res,
-		}))
+	fn op(&self, other: &Self, op: &Op) -> Result<Value> {
+		match op {
+			Op::Math(op) => {
+				let res = match op.kind {
+					ExprOpMathKind::Add => self + other,
+					ExprOpMathKind::Sub => self - other,
+					ExprOpMathKind::Mul => self * other,
+					ExprOpMathKind::Div => self / other,
+				};
+				Ok(Value::Decimal(match &op.round {
+					Some(round) => match round {
+						ExprOpMathRound::Up => res.ceil(),
+						ExprOpMathRound::Down => res.floor(),
+						ExprOpMathRound::Round => res.round(),
+					},
+					None => res,
+				}))
+			}
+			_ => same_op_err(ValueKind::Decimal, op),
+		}
 	}
 }
 
 impl RunOp for String {
-	fn op(&self, other: &Self, op: &ExprOpMath) -> Result<Value> {
-		match op.kind {
-			ExprOpMathKind::Add => Ok(Value::String(format!("{}{}", self, other))),
+	fn op(&self, other: &Self, op: &Op) -> Result<Value> {
+		match op {
+			Op::Math(ExprOpMath {
+				kind: ExprOpMathKind::Add,
+				..
+			}) => Ok(Value::String(format!("{}{}", self, other))),
 			_ => same_op_err(ValueKind::String, op),
 		}
 	}
 }
 
 impl RunOp for Vec<Value> {
-	fn op(&self, other: &Self, op: &ExprOpMath) -> Result<Value> {
-		match op.kind {
-			ExprOpMathKind::Add => {
-				Ok(Value::Array([self.as_slice(), other.as_slice()].concat()))
-			}
+	fn op(&self, other: &Self, op: &Op) -> Result<Value> {
+		match op {
+			Op::Math(ExprOpMath {
+				kind: ExprOpMathKind::Add,
+				..
+			}) => Ok(Value::Array([self.as_slice(), other.as_slice()].concat())),
 			_ => same_op_err(ValueKind::Array, op),
 		}
 	}
 }
 
-#[derive(Clone, Debug)]
-pub enum ExprVal {
-	Value(Value),
-	Paren(Box<prec::Expression<ExprOpMath, ExprVal>>),
-}
-
-impl prec::Token<Value, RuntimeError> for ExprVal {
-	fn convert(self, ctx: &()) -> Result<Value> {
-		Ok(match self {
-			ExprVal::Paren(expr) => PREC_CLIMBER.process(expr.as_ref(), &())?,
-			ExprVal::Value(v) => v,
-		})
-	}
-}
-
 fn prec_handler(
-	lhs: ExprVal,
-	op: ExprOpMath,
-	rhs: ExprVal,
+	lhs: RolledExprVal,
+	op: Op,
+	rhs: RolledExprVal,
 	_: &(),
-) -> Result<ExprVal> {
+) -> Result<RolledExprVal> {
 	let lhs = lhs.convert(&())?;
 	let rhs = rhs.convert(&())?;
-	Ok(ExprVal::Value(lhs.run_op(&rhs, &op)?))
+	Ok(RolledExprVal::Value(lhs.run_op(&rhs, &op)?))
 }
 
-fn every_rule(src: ExprOpMathKind) -> Rule<ExprOpMath> {
+fn every_rule(src: ExprOpMathKind) -> Rule<Op> {
 	let mut r = Rule::new(
-		ExprOpMath {
+		Op::Math(ExprOpMath {
 			kind: src,
 			round: None,
-		},
+		}),
 		Assoc::Left,
 	);
 	for round in [
@@ -235,10 +276,10 @@ fn every_rule(src: ExprOpMathKind) -> Rule<ExprOpMath> {
 	] {
 		r = r
 			| Rule::new(
-				ExprOpMath {
+				Op::Math(ExprOpMath {
 					kind: src,
 					round: Some(round),
-				},
+				}),
 				Assoc::Left,
 			);
 	}
@@ -246,7 +287,7 @@ fn every_rule(src: ExprOpMathKind) -> Rule<ExprOpMath> {
 }
 
 lazy_static! {
-	pub static ref PREC_CLIMBER: Climber<ExprOpMath, ExprVal, Value, RuntimeError> =
+	pub static ref PREC_CLIMBER: Climber<Op, RolledExprVal, Value, RuntimeError> =
 		Climber::new(
 			vec![
 				every_rule(ExprOpMathKind::Add) | every_rule(ExprOpMathKind::Sub),
@@ -343,10 +384,10 @@ fn auto_converting_ops() {
 		Value::Integer(10)
 			.run_op(
 				&Value::Decimal(6.9),
-				&ExprOpMath {
+				&Op::Math(ExprOpMath {
 					kind: ExprOpMathKind::Add,
 					round: None
-				}
+				})
 			)
 			.unwrap(),
 		Value::Decimal(16.9)
@@ -355,10 +396,10 @@ fn auto_converting_ops() {
 		Value::String("foo ".to_string())
 			.run_op(
 				&Value::Decimal(69.0),
-				&ExprOpMath {
+				&Op::Math(ExprOpMath {
 					kind: ExprOpMathKind::Add,
 					round: None
-				}
+				})
 			)
 			.unwrap(),
 		Value::String("foo 69".to_string())
@@ -367,10 +408,10 @@ fn auto_converting_ops() {
 		Value::Array(vec![Value::Integer(69), Value::String("nice".to_string())])
 			.run_op(
 				&Value::Array(vec![Value::Boolean(true),]),
-				&ExprOpMath {
+				&Op::Math(ExprOpMath {
 					kind: ExprOpMathKind::Add,
 					round: None
-				}
+				})
 			)
 			.unwrap(),
 		Value::Array(vec![
