@@ -1,4 +1,4 @@
-use crate::{value::Value, Result};
+use crate::{value::Value, Result, RuntimeError};
 use ivory_expression::Expression;
 use ivory_tokenizer::{
 	accessor::Accessor,
@@ -68,7 +68,7 @@ impl Runtime {
 		ctx: &RuntimeContext,
 		expr: &Expression<Op, Value>,
 	) -> Result<Expression<ExprOpMath, Value>> {
-		let rolled = expr.collapse(|lhs, op, rhs| {
+		let rolled = expr.collapse::<_, RuntimeError>(|lhs, op, rhs| {
 			if let Op::Dice = op {
 				let lhs = match lhs {
 					ivory_expression::ExpressionComponent::Token(val) => Ok(val.clone()),
@@ -78,9 +78,9 @@ impl Runtime {
 				};
 				todo!();
 			} else {
-				true
+				Ok(true)
 			}
-		});
+		})?;
 
 		todo!();
 	}

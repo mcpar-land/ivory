@@ -130,15 +130,19 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 	/// return true to keep the pair in the result
 	/// return false to drop it from the result
 	/// you can also modify the LHS value
-	pub fn collapse<M>(&self, m: M) -> Expression<O, T>
+	pub fn collapse<M, E>(&self, m: M) -> Result<Expression<O, T>, E>
 	where
-		M: Fn(&mut ExpressionComponent<O, T>, &O, &ExpressionComponent<O, T>) -> bool
+		M: Fn(
+				&mut ExpressionComponent<O, T>,
+				&O,
+				&ExpressionComponent<O, T>,
+			) -> Result<bool, E>
 			+ Copy,
 	{
 		let mut first = match &self.first {
 			ExpressionComponent::Token(_) => self.first.clone(),
 			ExpressionComponent::Paren(paren) => {
-				ExpressionComponent::Paren(Box::new(paren.collapse(m)))
+				ExpressionComponent::Paren(Box::new(paren.collapse(m)?))
 			}
 		};
 		let mut pairs: Vec<Option<Pair<O, T>>> = Vec::new();
@@ -146,14 +150,16 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		let parens_collapsed = self
 			.pairs
 			.iter()
-			.map(|pair| match &pair.1 {
-				ExpressionComponent::Token(_) => pair.clone(),
-				ExpressionComponent::Paren(paren) => Pair(
-					pair.0.clone(),
-					ExpressionComponent::Paren(Box::new(paren.collapse(m))),
-				),
+			.map(|pair| {
+				Ok(match &pair.1 {
+					ExpressionComponent::Token(_) => pair.clone(),
+					ExpressionComponent::Paren(paren) => Pair(
+						pair.0.clone(),
+						ExpressionComponent::Paren(Box::new(paren.collapse(m)?)),
+					),
+				})
 			})
-			.collect::<Vec<Pair<O, T>>>();
+			.collect::<Result<Vec<Pair<O, T>>, E>>()?;
 		for (i, pair) in parens_collapsed.iter().enumerate() {
 			let mut lhs = if i == 0 {
 				&self.first
@@ -161,7 +167,7 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 				&parens_collapsed[i - 1].1
 			}
 			.clone();
-			if m(&mut lhs, &pair.0, &pair.1) {
+			if m(&mut lhs, &pair.0, &pair.1)? {
 				pairs.push(Some(pair.clone()));
 			} else {
 				pairs.push(None);
@@ -176,10 +182,10 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 			}
 		}
 
-		Expression {
+		Ok(Expression {
 			first,
 			pairs: pairs.into_iter().filter_map(|v| v).collect(),
-		}
+		})
 	}
 }
 
@@ -295,7 +301,7 @@ mod test {
 		A, // does nothing
 		B, // adds one to previous value, deletes itself
 		C, // adds one to the previous value, does not delete itself
-		   // D, // panic instantly
+		D, // panic instantly
 	}
 
 	fn sample_expression() -> Expression<Op, i32> {
@@ -337,21 +343,22 @@ mod test {
 
 		let add: i32 = 1;
 
-		let new_expr: Expression<Op, i32> = expr.collapse(|lhs, op, _| match op {
-			Op::A => true,
-			Op::B => {
-				println!("RUNNING B ON {:?}", lhs);
-				*lhs = lhs.map_tokens(|v| *v + add);
-				false
-			}
-			Op::C => {
-				println!("RUNNING C ON {:?}", lhs);
-				*lhs = lhs.map_tokens(|v| *v + add);
-				true
-			} // Op::D => {
-			  // 	panic!();
-			  // }
-		});
+		let new_expr: Expression<Op, i32> = expr
+			.collapse::<_, &'static str>(|lhs, op, _| match op {
+				Op::A => Ok(true),
+				Op::B => {
+					println!("RUNNING B ON {:?}", lhs);
+					*lhs = lhs.map_tokens(|v| *v + add);
+					Ok(false)
+				}
+				Op::C => {
+					println!("RUNNING C ON {:?}", lhs);
+					*lhs = lhs.map_tokens(|v| *v + add);
+					Ok(true)
+				}
+				Op::D => Err("Used op d which causes an error"),
+			})
+			.unwrap();
 
 		println!("{:?}", expr);
 		println!("{:?}", new_expr);
