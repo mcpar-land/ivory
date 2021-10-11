@@ -15,15 +15,27 @@ pub enum ExpressionComponent<O, T> {
 }
 
 impl<O: Clone, T: Clone> ExpressionComponent<O, T> {
-	pub fn map<F, Nt>(&self, f: F) -> ExpressionComponent<O, Nt>
+	pub fn map_tokens<F, Nt>(&self, f: F) -> ExpressionComponent<O, Nt>
 	where
 		F: Fn(&T) -> Nt + Copy,
 	{
 		match self {
 			ExpressionComponent::Token(t) => ExpressionComponent::Token(f(t)),
-			ExpressionComponent::Paren(p) => ExpressionComponent::Paren(Box::new(
-				p.map(f, |_, _, rhs| (None, Some(rhs.map(f)))),
-			)),
+			ExpressionComponent::Paren(p) => {
+				ExpressionComponent::Paren(Box::new(p.map_tokens(f)))
+			}
+		}
+	}
+
+	pub fn map_operators<No, F>(&self, f: F) -> ExpressionComponent<No, T>
+	where
+		F: Fn(&O) -> No + Copy,
+	{
+		match self {
+			ExpressionComponent::Token(t) => ExpressionComponent::Token(t.clone()),
+			ExpressionComponent::Paren(p) => {
+				ExpressionComponent::Paren(Box::new(p.map_operators(f)))
+			}
 		}
 	}
 }
@@ -68,49 +80,97 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		}
 	}
 
+	pub fn map<No: Clone, Nt, Fo, Ft>(&self, fo: Fo, ft: Ft) -> Expression<No, Nt>
+	where
+		Fo: Fn(&O) -> No + Copy,
+		Ft: Fn(&T) -> Nt + Copy,
+	{
+		self.map_operators(fo).map_tokens(ft)
+	}
+
+	pub fn map_tokens<Nt, F>(&self, f: F) -> Expression<O, Nt>
+	where
+		F: Fn(&T) -> Nt + Copy,
+	{
+		let mut new_expr = Expression {
+			first: self.first.map_tokens(f),
+			pairs: Vec::new(),
+		};
+		for Pair(op, component) in &self.pairs {
+			new_expr
+				.pairs
+				.push(Pair(op.clone(), component.map_tokens(f)))
+		}
+		new_expr
+	}
+
+	pub fn map_operators<No, F>(&self, f: F) -> Expression<No, T>
+	where
+		F: Fn(&O) -> No + Copy,
+	{
+		let mut new_expr = Expression {
+			first: self.first.map_operators(f),
+			pairs: Vec::new(),
+		};
+		for Pair(op, component) in &self.pairs {
+			new_expr.pairs.push(Pair(f(op), component.map_operators(f)))
+		}
+		new_expr
+	}
+
 	/// Run a map over every pair.
 	/// You can edit the component that comes before each pair.
 	/// By returning `None`, a pair isn't added to the new pair.
-	pub fn map<Nt, F, M>(&self, f: F, m: M) -> Expression<O, Nt>
+	pub fn collapse<M>(&self, m: M) -> Expression<O, T>
 	where
-		F: Fn(&T) -> Nt + Copy,
-		M: Fn(
-			&ExpressionComponent<O, T>,
-			&O,
-			&ExpressionComponent<O, T>,
-		) -> (
-			Option<ExpressionComponent<O, Nt>>,
-			Option<ExpressionComponent<O, Nt>>,
-		),
+		M: Fn(&mut ExpressionComponent<O, T>, &O, &ExpressionComponent<O, T>) -> bool
+			+ Copy,
 	{
-		let mut new_expr = Expression {
-			first: self.first.map(f),
-			pairs: Vec::new(),
+		let mut first = match &self.first {
+			ExpressionComponent::Token(_) => self.first.clone(),
+			ExpressionComponent::Paren(paren) => {
+				ExpressionComponent::Paren(Box::new(paren.collapse(m)))
+			}
 		};
-		let mut new_expr_len = 0usize;
-		for i in 0..self.pairs.len() {
-			let lhs = if i == 0 {
+		let mut pairs: Vec<Option<Pair<O, T>>> = Vec::new();
+
+		let parens_collapsed = self
+			.pairs
+			.iter()
+			.map(|pair| match &pair.1 {
+				ExpressionComponent::Token(_) => pair.clone(),
+				ExpressionComponent::Paren(paren) => Pair(
+					pair.0.clone(),
+					ExpressionComponent::Paren(Box::new(paren.collapse(m))),
+				),
+			})
+			.collect::<Vec<Pair<O, T>>>();
+		for (i, pair) in parens_collapsed.iter().enumerate() {
+			let mut lhs = if i == 0 {
 				&self.first
 			} else {
-				&self.pairs[i - 1].1
-			};
-			let (lhs, rhs) = m(lhs, &self.pairs[i].0, &self.pairs[i].1);
-
-			if let Some(lhs) = lhs {
-				let a = if new_expr_len == 0 {
-					&mut new_expr.first
-				} else {
-					&mut new_expr.pairs[new_expr_len - 1].1
-				};
-				*a = lhs;
+				&parens_collapsed[i - 1].1
+			}
+			.clone();
+			if m(&mut lhs, &pair.0, &pair.1) {
+				pairs.push(Some(pair.clone()));
+			} else {
+				pairs.push(None);
 			}
 
-			if let Some(rhs) = rhs {
-				new_expr.pairs.push(Pair(self.pairs[i].0.clone(), rhs));
-				new_expr_len += 1;
+			if i == 0 {
+				first = lhs;
+			} else {
+				if let Some(Some(prev)) = pairs.get_mut(i - 1) {
+					prev.1 = lhs;
+				}
 			}
 		}
-		new_expr
+
+		Expression {
+			first,
+			pairs: pairs.into_iter().filter_map(|v| v).collect(),
+		}
 	}
 }
 
@@ -203,7 +263,7 @@ impl<O: Debug, T: Debug> Debug for Expression<O, T> {
 				.pairs
 				.iter()
 				.fold(format!("{:?}", self.first), |s, component| {
-					format!("{} {:?}", s, component)
+					format!("{}, {:?}", s, component)
 				})
 		)
 	}
@@ -213,46 +273,69 @@ impl<O: Debug, T: Debug> Debug for Expression<O, T> {
 mod test {
 	use super::*;
 
-	#[test]
-	fn test_expr_map() {
-		#[derive(Clone, Debug)]
-		enum Op {
-			A, // does nothing
-			B, // adds one to previous value, deletes itself
-			C, // adds one to the previous value, does not delete itself
-		}
+	#[derive(Clone, Debug)]
+	enum Op {
+		A, // does nothing
+		B, // adds one to previous value, deletes itself
+		C, // adds one to the previous value, does not delete itself
+		D, // panic instantly
+	}
 
-		let expr: Expression<Op, i32> = Expression {
+	fn sample_expression() -> Expression<Op, i32> {
+		Expression {
 			first: ExpressionComponent::Token(0),
 			pairs: vec![
-				Pair(Op::A, ExpressionComponent::Token(1)),
+				Pair(Op::C, ExpressionComponent::Token(1)),
 				Pair(Op::B, ExpressionComponent::Token(2)),
 				Pair(Op::C, ExpressionComponent::Token(69)),
 				Pair(Op::A, ExpressionComponent::Token(4)),
-				Pair(Op::A, ExpressionComponent::Token(5)),
+				Pair(
+					Op::A,
+					ExpressionComponent::Paren(Box::new(Expression {
+						first: ExpressionComponent::Token(60),
+						pairs: vec![
+							Pair(Op::B, ExpressionComponent::Token(9)),
+							Pair(Op::C, ExpressionComponent::Token(9)),
+						],
+					})),
+				),
+				Pair(Op::C, ExpressionComponent::Token(5)),
 				Pair(Op::A, ExpressionComponent::Token(6)),
 			],
-		};
+		}
+	}
 
-		let new_expr: Expression<Op, f32> = expr.map(
-			|f| *f as f32,
-			|lhs, op, rhs| match op {
-				Op::A => (None, Some(rhs.map(|i| *i as f32))),
-				Op::B => match lhs {
-					ExpressionComponent::Token(prev) => {
-						(Some(ExpressionComponent::Token(*prev as f32 + 1.0)), None)
-					}
-					ExpressionComponent::Paren(_) => (None, None),
-				},
-				Op::C => match lhs {
-					ExpressionComponent::Token(prev) => (
-						Some(ExpressionComponent::Token(*prev as f32 + 1.0)),
-						Some(rhs.map(|i| *i as f32)),
-					),
-					_ => (None, Some(rhs.map(|i| *i as f32))),
-				},
-			},
-		);
+	#[test]
+	fn test_expr_map() {
+		let expr = sample_expression();
+
+		let new_expr = expr.map(|op| op.clone(), |t| *t as f32);
+
+		println!("{:?}\n{:?}", expr, new_expr);
+	}
+
+	#[test]
+	fn test_expr_collapse() {
+		let expr: Expression<Op, i32> = sample_expression();
+
+		let add: i32 = 1;
+
+		let new_expr: Expression<Op, i32> = expr.collapse(|lhs, op, _| match op {
+			Op::A => true,
+			Op::B => {
+				println!("RUNNING B ON {:?}", lhs);
+				*lhs = lhs.map_tokens(|v| *v + add);
+				false
+			}
+			Op::C => {
+				println!("RUNNING C ON {:?}", lhs);
+				*lhs = lhs.map_tokens(|v| *v + add);
+				true
+			}
+			Op::D => {
+				panic!();
+			}
+		});
 
 		println!("{:?}", expr);
 		println!("{:?}", new_expr);
