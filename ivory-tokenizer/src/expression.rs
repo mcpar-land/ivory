@@ -24,13 +24,26 @@ use self::{dice_ops::DiceOp, math::ExprOpMath};
 
 impl Parse for ivory_expression::ExpressionComponent<Op, ExpressionToken> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		todo!()
+		alt((
+			map(ExpressionToken::parse, |r| Self::Token(r)),
+			map(
+				delimited(
+					pair(char('('), multispace0),
+					Expression::parse,
+					pair(multispace0, char(')')),
+				),
+				|r| Self::Paren(Box::new(r)),
+			),
+		))(input)
 	}
 }
 
 impl Parse for Pair<Op, ExpressionToken> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		todo!()
+		map(
+			separated_pair(Op::parse, multispace0, ExpressionComponent::parse),
+			|(op, component)| Pair(op, component),
+		)(input)
 	}
 }
 
@@ -87,14 +100,10 @@ impl ExpressionToken {
 
 impl Parse for ExpressionToken {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		// alt((
-		// 	map(Value::parse, |r| Self::Value(r)),
-		// 	map(Accessor::parse, |r| Self::Accessor(r)),
-		// 	map(delimited(char('('), Expression::parse, char(')')), |r| {
-		// 		Self::Paren(Box::new(r))
-		// 	}),
-		// ))(input)
-		todo!();
+		alt((
+			map(Value::parse, |r| Self::Value(r)),
+			map(Accessor::parse, |r| Self::Accessor(r)),
+		))(input)
 	}
 }
 

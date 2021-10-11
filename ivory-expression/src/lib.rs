@@ -7,7 +7,7 @@ pub struct Expression<O, T> {
 	pub pairs: Vec<Pair<O, T>>,
 }
 
-pub struct Pair<O, T>(O, ExpressionComponent<O, T>);
+pub struct Pair<O, T>(pub O, pub ExpressionComponent<O, T>);
 
 pub enum ExpressionComponent<O, T> {
 	Token(T),
