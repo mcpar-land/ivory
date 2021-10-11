@@ -118,9 +118,10 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		new_expr
 	}
 
-	/// Run a map over every pair.
-	/// You can edit the component that comes before each pair.
-	/// By returning `None`, a pair isn't added to the new pair.
+	/// run a closure over every pair.
+	/// return true to keep the pair in the result
+	/// return false to drop it from the result
+	/// you can also modify the LHS value
 	pub fn collapse<M>(&self, m: M) -> Expression<O, T>
 	where
 		M: Fn(&mut ExpressionComponent<O, T>, &O, &ExpressionComponent<O, T>) -> bool
@@ -309,7 +310,7 @@ mod test {
 	fn test_expr_map() {
 		let expr = sample_expression();
 
-		let new_expr = expr.map(|op| op.clone(), |t| *t as f32);
+		let new_expr = expr.map(|_| "a cool op", |t| *t as f32);
 
 		println!("{:?}\n{:?}", expr, new_expr);
 	}
