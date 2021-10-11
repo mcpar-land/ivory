@@ -2,14 +2,14 @@ use std::fmt::{Debug, Display, Formatter};
 
 pub mod iter;
 
-pub struct Expression<O, T> {
+pub struct Expression<O: Clone, T: Clone> {
 	pub first: ExpressionComponent<O, T>,
 	pub pairs: Vec<Pair<O, T>>,
 }
 
-pub struct Pair<O, T>(pub O, pub ExpressionComponent<O, T>);
+pub struct Pair<O: Clone, T: Clone>(pub O, pub ExpressionComponent<O, T>);
 
-pub enum ExpressionComponent<O, T> {
+pub enum ExpressionComponent<O: Clone, T: Clone> {
 	Token(T),
 	Paren(Box<Expression<O, T>>),
 }
@@ -18,6 +18,7 @@ impl<O: Clone, T: Clone> ExpressionComponent<O, T> {
 	pub fn map_tokens<F, Nt>(&self, f: F) -> ExpressionComponent<O, Nt>
 	where
 		F: Fn(&T) -> Nt + Copy,
+		Nt: Clone,
 	{
 		match self {
 			ExpressionComponent::Token(t) => ExpressionComponent::Token(f(t)),
@@ -30,6 +31,7 @@ impl<O: Clone, T: Clone> ExpressionComponent<O, T> {
 	pub fn map_operators<No, F>(&self, f: F) -> ExpressionComponent<No, T>
 	where
 		F: Fn(&O) -> No + Copy,
+		No: Clone,
 	{
 		match self {
 			ExpressionComponent::Token(t) => ExpressionComponent::Token(t.clone()),
@@ -80,7 +82,11 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		}
 	}
 
-	pub fn map<No: Clone, Nt, Fo, Ft>(&self, fo: Fo, ft: Ft) -> Expression<No, Nt>
+	pub fn map<No: Clone, Nt: Clone, Fo, Ft>(
+		&self,
+		fo: Fo,
+		ft: Ft,
+	) -> Expression<No, Nt>
 	where
 		Fo: Fn(&O) -> No + Copy,
 		Ft: Fn(&T) -> Nt + Copy,
@@ -91,6 +97,7 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 	pub fn map_tokens<Nt, F>(&self, f: F) -> Expression<O, Nt>
 	where
 		F: Fn(&T) -> Nt + Copy,
+		Nt: Clone,
 	{
 		let mut new_expr = Expression {
 			first: self.first.map_tokens(f),
@@ -107,6 +114,7 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 	pub fn map_operators<No, F>(&self, f: F) -> Expression<No, T>
 	where
 		F: Fn(&O) -> No + Copy,
+		No: Clone,
 	{
 		let mut new_expr = Expression {
 			first: self.first.map_operators(f),
@@ -175,7 +183,7 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 	}
 }
 
-impl<O, T: Default> Default for Expression<O, T> {
+impl<O: Clone, T: Default + Clone> Default for Expression<O, T> {
 	fn default() -> Self {
 		Self {
 			first: ExpressionComponent::Token(T::default()),
@@ -210,7 +218,9 @@ impl<O: Clone, T: Clone> Clone for Pair<O, T> {
 
 // display and debug impls
 
-impl<O: Display, T: Display> Display for ExpressionComponent<O, T> {
+impl<O: Display + Clone, T: Display + Clone> Display
+	for ExpressionComponent<O, T>
+{
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
 		match self {
 			ExpressionComponent::Token(token) => write!(f, "{}", token),
@@ -219,13 +229,13 @@ impl<O: Display, T: Display> Display for ExpressionComponent<O, T> {
 	}
 }
 
-impl<O: Display, T: Display> Display for Pair<O, T> {
+impl<O: Display + Clone, T: Display + Clone> Display for Pair<O, T> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
 		write!(f, "{} {}", self.0, self.1)
 	}
 }
 
-impl<O: Display, T: Display> Display for Expression<O, T> {
+impl<O: Display + Clone, T: Display + Clone> Display for Expression<O, T> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
 		write!(
 			f,
@@ -240,7 +250,7 @@ impl<O: Display, T: Display> Display for Expression<O, T> {
 	}
 }
 
-impl<O: Debug, T: Debug> Debug for ExpressionComponent<O, T> {
+impl<O: Debug + Clone, T: Debug + Clone> Debug for ExpressionComponent<O, T> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		match self {
 			ExpressionComponent::Token(token) => write!(f, "{:?}", token),
@@ -249,13 +259,13 @@ impl<O: Debug, T: Debug> Debug for ExpressionComponent<O, T> {
 	}
 }
 
-impl<O: Debug, T: Debug> Debug for Pair<O, T> {
+impl<O: Debug + Clone, T: Debug + Clone> Debug for Pair<O, T> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{:?} {:?}", self.0, self.1)
 	}
 }
 
-impl<O: Debug, T: Debug> Debug for Expression<O, T> {
+impl<O: Debug + Clone, T: Debug + Clone> Debug for Expression<O, T> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		write!(
 			f,
@@ -279,7 +289,7 @@ mod test {
 		A, // does nothing
 		B, // adds one to previous value, deletes itself
 		C, // adds one to the previous value, does not delete itself
-		D, // panic instantly
+		   // D, // panic instantly
 	}
 
 	fn sample_expression() -> Expression<Op, i32> {
@@ -332,10 +342,9 @@ mod test {
 				println!("RUNNING C ON {:?}", lhs);
 				*lhs = lhs.map_tokens(|v| *v + add);
 				true
-			}
-			Op::D => {
-				panic!();
-			}
+			} // Op::D => {
+			  // 	panic!();
+			  // }
 		});
 
 		println!("{:?}", expr);

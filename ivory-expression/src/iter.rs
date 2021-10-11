@@ -1,6 +1,6 @@
 use crate::{Expression, ExpressionComponent, Pair};
 
-pub struct OpIterator<'a, O, T> {
+pub struct OpIterator<'a, O: Clone, T: Clone> {
 	first: Option<&'a ExpressionComponent<O, T>>,
 	pairs: &'a [Pair<O, T>],
 	parent: Option<Box<OpIterator<'a, O, T>>>,
@@ -13,7 +13,7 @@ pub type OperatorSet<'a, O, T> = (
 	&'a ExpressionComponent<O, T>,
 );
 
-impl<'a, O, T> OpIterator<'a, O, T> {
+impl<'a, O: Clone, T: Clone> OpIterator<'a, O, T> {
 	fn move_into_paren(&mut self, first: bool) -> bool {
 		let possible_paren = self.pairs.get(if first { 0 } else { 1 });
 		if let Some(Pair(_, ExpressionComponent::Paren(paren))) = possible_paren {
@@ -43,7 +43,7 @@ impl<'a, O, T> OpIterator<'a, O, T> {
 	}
 }
 
-impl<'a, O, T> Iterator for OpIterator<'a, O, T> {
+impl<'a, O: Clone, T: Clone> Iterator for OpIterator<'a, O, T> {
 	type Item = OperatorSet<'a, O, T>;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -81,7 +81,7 @@ impl<'a, O, T> Iterator for OpIterator<'a, O, T> {
 	}
 }
 
-impl<'a, O, T> Default for OpIterator<'a, O, T> {
+impl<'a, O: Clone, T: Clone> Default for OpIterator<'a, O, T> {
 	fn default() -> Self {
 		Self {
 			first: None,
