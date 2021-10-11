@@ -40,6 +40,27 @@ impl<O: Clone, T: Clone> ExpressionComponent<O, T> {
 			}
 		}
 	}
+
+	pub fn run_mut<M, E>(&mut self, m: M) -> Result<(), E>
+	where
+		M: Fn(&mut T) -> Result<(), E> + Copy,
+	{
+		match self {
+			ExpressionComponent::Token(token) => m(token),
+			ExpressionComponent::Paren(paren) => paren.run_mut(m),
+		}
+	}
+}
+
+impl<'a, O: Clone, T: Clone, E: Clone> ExpressionComponent<O, Result<T, E>> {
+	pub fn ok(self) -> Result<ExpressionComponent<O, T>, E> {
+		Ok(match self {
+			ExpressionComponent::Token(token) => ExpressionComponent::Token(token?),
+			ExpressionComponent::Paren(paren) => {
+				ExpressionComponent::Paren(Box::new(paren.ok()?))
+			}
+		})
+	}
 }
 
 impl<O: Clone, T: Clone> Expression<O, T> {
@@ -187,11 +208,29 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 			pairs: pairs.into_iter().filter_map(|v| v).collect(),
 		})
 	}
+
+	pub fn run_mut<M, E>(&mut self, m: M) -> Result<(), E>
+	where
+		M: Fn(&mut T) -> Result<(), E> + Copy,
+	{
+		self.first.run_mut(m)?;
+		for Pair(_, component) in &mut self.pairs {
+			component.run_mut(m)?;
+		}
+		Ok(())
+	}
 }
 
 impl<O: Clone, T: Clone, E: Clone> Expression<O, Result<T, E>> {
 	pub fn ok(self) -> Result<Expression<O, T>, E> {
-		todo!();
+		let mut e = Expression {
+			first: self.first.ok()?,
+			pairs: Vec::new(),
+		};
+		for Pair(op, component) in self.pairs {
+			e.pairs.push(Pair(op, component.ok()?));
+		}
+		Ok(e)
 	}
 }
 

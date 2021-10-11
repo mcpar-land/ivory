@@ -36,7 +36,7 @@ pub enum Value {
 	Decimal(f32),
 	Boolean(bool),
 	String(String),
-	Roll(()),
+	Roll(Roll),
 	Array(Vec<Value>),
 	Object(HashMap<String, Value>),
 	Function(FunctionValue),
@@ -89,42 +89,188 @@ impl Value {
 		}
 	}
 
-	pub fn to_integer(&self) -> Result<i32> {
-		todo!();
+	pub fn to_integer(&self) -> Result<&i32> {
+		if let Self::Integer(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Integer,
+				self.kind(),
+			))
+		}
 	}
 
-	pub fn to_decimal(&self) -> Result<f32> {
-		todo!();
+	pub fn to_decimal(&self) -> Result<&f32> {
+		if let Self::Decimal(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Decimal,
+				self.kind(),
+			))
+		}
 	}
 
-	pub fn to_boolean(&self) -> Result<bool> {
-		todo!();
+	pub fn to_boolean(&self) -> Result<&bool> {
+		if let Self::Boolean(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Boolean,
+				self.kind(),
+			))
+		}
 	}
 
-	pub fn to_string(&self) -> Result<bool> {
-		todo!();
+	pub fn to_string(&self) -> Result<&String> {
+		if let Self::String(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::String,
+				self.kind(),
+			))
+		}
 	}
 
-	pub fn to_roll(&self) -> Result<Roll> {
-		todo!();
+	pub fn to_roll(&self) -> Result<&Roll> {
+		if let Self::Roll(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Roll,
+				self.kind(),
+			))
+		}
 	}
 
-	pub fn to_array(&self) -> Result<Vec<Value>> {
-		todo!();
+	pub fn to_array(&self) -> Result<&Vec<Value>> {
+		if let Self::Array(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Array,
+				self.kind(),
+			))
+		}
 	}
 
-	pub fn to_object(&self) -> Result<HashMap<String, Value>> {
-		todo!();
+	pub fn to_object(&self) -> Result<&HashMap<String, Value>> {
+		if let Self::Object(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Object,
+				self.kind(),
+			))
+		}
 	}
 
-	pub fn to_function(&self) -> Result<FunctionValue> {
-		todo!();
+	pub fn to_function(&self) -> Result<&FunctionValue> {
+		if let Self::Function(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Function,
+				self.kind(),
+			))
+		}
 	}
 
-	pub fn from_token(
+	// mut edits
+
+	pub fn mut_integer(&mut self) -> Result<&mut i32> {
+		if let Self::Integer(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Integer,
+				self.kind(),
+			))
+		}
+	}
+
+	pub fn mut_decimal(&mut self) -> Result<&mut f32> {
+		if let Self::Decimal(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Decimal,
+				self.kind(),
+			))
+		}
+	}
+
+	pub fn mut_boolean(&mut self) -> Result<&mut bool> {
+		if let Self::Boolean(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Boolean,
+				self.kind(),
+			))
+		}
+	}
+
+	pub fn mut_string(&mut self) -> Result<&mut String> {
+		if let Self::String(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::String,
+				self.kind(),
+			))
+		}
+	}
+
+	pub fn mut_roll(&mut self) -> Result<&mut Roll> {
+		if let Self::Roll(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Roll,
+				self.kind(),
+			))
+		}
+	}
+
+	pub fn mut_array(&mut self) -> Result<&mut Vec<Value>> {
+		if let Self::Array(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Array,
+				self.kind(),
+			))
+		}
+	}
+
+	pub fn mut_object(&mut self) -> Result<&mut HashMap<String, Value>> {
+		if let Self::Object(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Object,
+				self.kind(),
+			))
+		}
+	}
+
+	pub fn mut_function(&mut self) -> Result<&mut FunctionValue> {
+		if let Self::Function(v) = self {
+			Ok(v)
+		} else {
+			Err(RuntimeError::WrongExpectedValue(
+				ValueKind::Function,
+				self.kind(),
+			))
+		}
+	}
+
+	pub fn from_token<R: Rng>(
 		token: &ivory_tokenizer::values::Value,
 		runtime: &Runtime,
-		ctx: &RuntimeContext,
+		ctx: &RuntimeContext<R>,
 	) -> Result<Self> {
 		Ok(match token {
 			ivory_tokenizer::values::Value::Boolean(BooleanValue(v)) => {
