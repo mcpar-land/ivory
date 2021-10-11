@@ -183,6 +183,12 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 	}
 }
 
+impl<O: Clone, T: Clone, E: Clone> Expression<O, Result<T, E>> {
+	pub fn ok(self) -> Result<Expression<O, T>, E> {
+		todo!();
+	}
+}
+
 impl<O: Clone, T: Default + Clone> Default for Expression<O, T> {
 	fn default() -> Self {
 		Self {

@@ -1,58 +1,89 @@
-use ivory_expression::Expression;
+use std::convert::TryInto;
+
+use ivory_expression::{Expression, ExpressionComponent, Pair};
 use ivory_tokenizer::expression::dice_ops::{DiceOp, DiceOpCmp};
-use ivory_tokenizer::expression::math::{ExprOpMath, ExprOpMathKind};
+use ivory_tokenizer::expression::math::{
+	ExprOpMath, ExprOpMathKind, ExprOpMathRound,
+};
 use ivory_tokenizer::expression::{ExpressionToken, Op};
+use lazy_static::lazy_static;
+use prec::{Assoc, Climber, Rule, Token};
 
 use crate::runtime::{Runtime, RuntimeContext};
-use crate::value::{Value, PREC_CLIMBER};
+use crate::value::Value;
 use crate::{Result, RuntimeError};
 
-pub type RolledExpression = prec::Expression<Op, RolledExprVal>;
+type Component = ExpressionComponent<ExprOpMath, Value>;
 
-#[derive(Clone, Debug)]
-pub enum RolledExprVal {
-	Value(Value),
-	Paren(Box<RolledExpression>),
+pub type RolledExpression = prec::Expression<ExprOpMath, Component>;
+
+fn into_prec(expr: Expression<ExprOpMath, Value>) -> RolledExpression {
+	prec::Expression::new(
+		expr.first,
+		expr.pairs.into_iter().map(|Pair(a, b)| (a, b)).collect(),
+	)
 }
 
-impl prec::Token<Value, RuntimeError> for RolledExprVal {
-	fn convert(self, ctx: &()) -> Result<Value> {
+impl prec::Token<Value, RuntimeError> for Component {
+	fn convert(self, _: &()) -> Result<Value> {
 		Ok(match self {
-			RolledExprVal::Paren(expr) => PREC_CLIMBER.process(expr.as_ref(), &())?,
-			RolledExprVal::Value(v) => v,
+			Self::Paren(expr) => PREC_CLIMBER.process(&into_prec(*expr), &())?,
+			Self::Token(v) => v,
 		})
 	}
 }
 
-pub fn roll_expression(
-	expr: &Expression<Op, ExpressionToken>,
-	runtime: &Runtime,
-	ctx: &RuntimeContext,
-) -> Result<RolledExpression> {
-	// fn convert(
-	// 	c: &ExpressionToken,
-	// 	runtime: &Runtime,
-	// 	ctx: &RuntimeContext,
-	// ) -> Result<RolledExprVal> {
-	// 	Ok(match c {
-	// 		ExpressionToken::Value(val) => {
-	// 			RolledExprVal::Value(Value::from_token(val, runtime, ctx)?)
-	// 		}
-	// 		ExpressionToken::Accessor(accessor) => {
-	// 			RolledExprVal::Value(runtime.access(ctx, &accessor)?)
-	// 		}
-	// 		ExpressionToken::Paren(paren) => {
-	// 			RolledExprVal::Paren(Box::new(roll_expression(&paren, runtime, ctx)?))
-	// 		}
-	// 	})
-	// }
+impl TryInto<Value> for Expression<ExprOpMath, Value> {
+	type Error = RuntimeError;
 
-	// let first = convert(&expr.first, runtime, ctx)?;
-	// let mut pairs = vec![];
-	// for ExpressionPair { op, component } in &expr.pairs {
-	// 	pairs.push((op.clone(), convert(&component, runtime, ctx)?));
-	// }
+	fn try_into(self) -> Result<Value> {
+		PREC_CLIMBER.process(&into_prec(self), &())
+	}
+}
 
-	// Ok(prec::Expression::new(first, pairs))
-	todo!();
+fn prec_handler(
+	lhs: Component,
+	op: ExprOpMath,
+	rhs: Component,
+	_: &(),
+) -> Result<Component> {
+	let lhs = lhs.convert(&())?;
+	let rhs = rhs.convert(&())?;
+	Ok(ExpressionComponent::Token(lhs.run_op(&rhs, &Op::Math(op))?))
+}
+
+fn every_rule(src: ExprOpMathKind) -> Rule<ExprOpMath> {
+	let mut r = Rule::new(
+		ExprOpMath {
+			kind: src,
+			round: None,
+		},
+		Assoc::Left,
+	);
+	for round in [
+		ExprOpMathRound::Down,
+		ExprOpMathRound::Up,
+		ExprOpMathRound::Round,
+	] {
+		r = r
+			| Rule::new(
+				ExprOpMath {
+					kind: src,
+					round: Some(round),
+				},
+				Assoc::Left,
+			);
+	}
+	r
+}
+
+lazy_static! {
+	pub static ref PREC_CLIMBER: Climber<ExprOpMath, Component, Value, RuntimeError> =
+		Climber::new(
+			vec![
+				every_rule(ExprOpMathKind::Add) | every_rule(ExprOpMathKind::Sub),
+				every_rule(ExprOpMathKind::Mul) | every_rule(ExprOpMathKind::Div)
+			],
+			prec_handler
+		);
 }

@@ -6,7 +6,7 @@ use crate::value::ValueKind;
 pub type Result<T> = std::result::Result<T, RuntimeError>;
 
 quick_error! {
-	#[derive(Debug)]
+	#[derive(Debug, Clone)]
 	pub enum RuntimeError {
 		Syntax(err: String) {
 			from()

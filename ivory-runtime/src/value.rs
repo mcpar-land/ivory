@@ -9,16 +9,17 @@ use ivory_tokenizer::{
 		string::StringValue, struct_instance::StructInstance,
 	},
 };
+use rand::Rng;
 
+use crate::Result;
 use crate::{
 	error::RuntimeError,
 	roll::Roll,
 	runtime::{Runtime, RuntimeContext},
 };
-use crate::{expr::RolledExprVal, Result};
 use lazy_static::lazy_static;
 use prec::{Assoc, Climber, Rule, Token};
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, convert::TryInto, fmt::Display};
 
 static K_INTEGER: &'static str = "int";
 static K_DECIMAL: &'static str = "decimal";
@@ -140,12 +141,18 @@ impl Value {
 			}
 			ivory_tokenizer::values::Value::Array(ArrayValue(v)) => Value::Array(
 				v.iter()
-					.map(|v| runtime.execute(ctx, v))
+					.map(|v| {
+						let v = runtime.valueify(ctx, v)?;
+						Ok(runtime.roll(ctx, &v)?.try_into()?)
+					})
 					.collect::<Result<Vec<Value>>>()?,
 			),
 			ivory_tokenizer::values::Value::Object(ObjectValue(v)) => Value::Object(
 				v.iter()
-					.map(|(n, v)| Ok((n.0.clone(), runtime.execute(ctx, v)?)))
+					.map(|(n, v)| {
+						let v = runtime.valueify(ctx, v)?;
+						Ok((n.0.clone(), runtime.roll(ctx, &v)?.try_into()?))
+					})
 					.collect::<Result<HashMap<String, Value>>>()?,
 			),
 			ivory_tokenizer::values::Value::Struct(s) => todo!(),
@@ -248,53 +255,6 @@ impl RunOp for Vec<Value> {
 			_ => same_op_err(ValueKind::Array, op),
 		}
 	}
-}
-
-fn prec_handler(
-	lhs: RolledExprVal,
-	op: Op,
-	rhs: RolledExprVal,
-	_: &(),
-) -> Result<RolledExprVal> {
-	let lhs = lhs.convert(&())?;
-	let rhs = rhs.convert(&())?;
-	Ok(RolledExprVal::Value(lhs.run_op(&rhs, &op)?))
-}
-
-fn every_rule(src: ExprOpMathKind) -> Rule<Op> {
-	let mut r = Rule::new(
-		Op::Math(ExprOpMath {
-			kind: src,
-			round: None,
-		}),
-		Assoc::Left,
-	);
-	for round in [
-		ExprOpMathRound::Down,
-		ExprOpMathRound::Up,
-		ExprOpMathRound::Round,
-	] {
-		r = r
-			| Rule::new(
-				Op::Math(ExprOpMath {
-					kind: src,
-					round: Some(round),
-				}),
-				Assoc::Left,
-			);
-	}
-	r
-}
-
-lazy_static! {
-	pub static ref PREC_CLIMBER: Climber<Op, RolledExprVal, Value, RuntimeError> =
-		Climber::new(
-			vec![
-				every_rule(ExprOpMathKind::Add) | every_rule(ExprOpMathKind::Sub),
-				every_rule(ExprOpMathKind::Mul) | every_rule(ExprOpMathKind::Div)
-			],
-			prec_handler
-		);
 }
 
 #[derive(Clone, Debug, Copy)]
