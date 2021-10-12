@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
 	error::RuntimeError,
 	runtime::{Runtime, RuntimeContext},
@@ -68,5 +70,15 @@ impl Roll {
 		rhs: &Value,
 	) -> Result<()> {
 		todo!();
+	}
+
+	pub fn value(&self) -> u32 {
+		todo!();
+	}
+}
+
+impl Display for Roll {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		todo!()
 	}
 }

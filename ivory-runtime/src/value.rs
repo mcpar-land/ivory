@@ -63,27 +63,27 @@ impl Value {
 			(Integer(a), Decimal(b)) => (*a as f32).op(b, op),
 			(Integer(a), Boolean(b)) => a.op(&(*b as i32), op),
 			(Integer(a), String(b)) => a.to_string().op(b, op),
-			(Integer(a), Roll(b)) => todo!(),
+			(Integer(a), Roll(b)) => a.op(&(b.value() as i32), op),
 			(Decimal(a), Integer(b)) => a.op(&(*b as f32), op),
 			(Decimal(a), Decimal(b)) => a.op(b, op),
 			(Decimal(a), Boolean(b)) => a.op(&(*b as i32 as f32), op),
 			(Decimal(a), String(b)) => a.to_string().op(b, op),
-			(Decimal(a), Roll(b)) => todo!(),
+			(Decimal(a), Roll(b)) => a.op(&(b.value() as f32), op),
 			(Boolean(a), Integer(b)) => (*a as i32).op(b, op),
 			(Boolean(a), Decimal(b)) => (*a as i32 as f32).op(b, op),
 			(Boolean(a), Boolean(b)) => (*a as i32).op(&(*b as i32), op),
 			(Boolean(a), String(b)) => a.to_string().op(b, op),
-			(Boolean(a), Roll(b)) => todo!(),
+			(Boolean(a), Roll(b)) => (*a as i32).op(&(b.value() as i32), op),
 			(String(a), Integer(b)) => a.op(&b.to_string(), op),
 			(String(a), Decimal(b)) => a.op(&b.to_string(), op),
 			(String(a), Boolean(b)) => a.op(&b.to_string(), op),
 			(String(a), String(b)) => a.op(b, op),
-			(String(a), Roll(b)) => todo!(),
-			(Roll(a), Integer(b)) => todo!(),
-			(Roll(a), Decimal(b)) => todo!(),
-			(Roll(a), Boolean(b)) => todo!(),
-			(Roll(a), String(b)) => todo!(),
-			(Roll(a), Roll(b)) => todo!(),
+			(String(a), Roll(b)) => a.op(&format!("{}", b), op),
+			(Roll(a), Integer(b)) => (a.value() as i32).op(b, op),
+			(Roll(a), Decimal(b)) => (a.value() as f32).op(b, op),
+			(Roll(a), Boolean(b)) => (a.value() as i32).op(&(*b as i32), op),
+			(Roll(a), String(b)) => format!("{}", a).op(b, op),
+			(Roll(a), Roll(b)) => (a.value() as i32).op(&(b.value() as i32), op),
 			(Array(a), Array(b)) => a.op(b, op),
 			(a, b) => Err(RuntimeError::CannotRunOp(a.kind(), op.clone(), b.kind())),
 		}
@@ -452,7 +452,7 @@ impl Display for Value {
 				write!(f, "\"{}\"", v)
 			}
 			Value::Roll(v) => {
-				todo!();
+				write!(f, "{}", v)
 			}
 			Value::Array(v) => {
 				write!(
