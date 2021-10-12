@@ -1,10 +1,12 @@
 use crate::{roll::Roll, value::Value, Result, RuntimeError};
 use ivory_expression::{Expression, ExpressionComponent};
 use ivory_tokenizer::{
-	accessor::Accessor,
+	accessor::{Accessor, AccessorComponent},
 	expression::{math::ExprOpMath, ExpressionToken, Op},
 	tokenize,
+	values::function::FunctionValue,
 	variable::Variable,
+	Module, Parse,
 };
 use rand::{prelude::StdRng, Rng};
 use std::{
@@ -13,14 +15,25 @@ use std::{
 	convert::TryInto,
 };
 
-pub struct Runtime {
+pub struct Runtime<R: Rng> {
 	pub structs: BTreeMap<String, ()>,
 	pub variables: BTreeMap<String, Variable>,
+	pub rng: RefCell<R>,
 }
 
-impl Runtime {
-	pub fn load(input: &str) -> Result<Self> {
-		let module = tokenize(input)?;
+impl<R: Rng> Runtime<R> {
+	pub fn new(rng: R) -> Self {
+		Self {
+			structs: BTreeMap::new(),
+			variables: BTreeMap::new(),
+			rng: RefCell::new(rng),
+		}
+	}
+	pub fn rng(&self) -> RefMut<R> {
+		self.rng.borrow_mut()
+	}
+	pub fn load(rng: R, input: &str) -> Result<Self> {
+		let module = tokenize::<Module>(input)?;
 
 		let mut structs = BTreeMap::new();
 		let mut variables = BTreeMap::new();
@@ -34,37 +47,89 @@ impl Runtime {
 			}
 		}
 
-		Ok(Self { structs, variables })
+		Ok(Self {
+			structs,
+			variables,
+			rng: RefCell::new(rng),
+		})
 	}
 
-	pub fn access<R: Rng>(
+	pub fn run(&self, cmd: &str) -> Result<Expression<ExprOpMath, Value>> {
+		let ex = tokenize::<Expression<Op, ExpressionToken>>(cmd)?;
+		Ok(self.execute(&RuntimeContext::new(), &ex)?)
+	}
+
+	pub fn access(
 		&self,
-		ctx: &RuntimeContext<R>,
+		ctx: &RuntimeContext,
 		Accessor(var, components): &Accessor,
 	) -> Result<Value> {
-		let param_value = ctx.params.get(&var.0);
-		todo!();
+		let mut value = match ctx.params.get(&var.0) {
+			Some(param) => param.clone(),
+			None => {
+				let val = self
+					.variables
+					.get(&var.0)
+					.ok_or_else(|| RuntimeError::VariableNotFound(var.0.clone()))?;
+				self.evaluate(ctx, &val.value)?
+			}
+		};
+		for component in components {
+			match component {
+				AccessorComponent::Property(prop) => {
+					if let Value::Object(obj) = &value {
+						if let Some(p) = obj.get(&prop.0) {
+							value = p.clone();
+						} else {
+							return Err(RuntimeError::PropNotFound(prop.0.clone()));
+						}
+					} else {
+						return Err(RuntimeError::NoPropertyOnKind(
+							value.kind(),
+							prop.0.clone(),
+						));
+					}
+				}
+				AccessorComponent::Index(i) => {
+					value = value.index(&self.evaluate(ctx, i)?)?;
+				}
+				AccessorComponent::Call(call) => {
+					if let Value::Function(FunctionValue { args, expr }) = &value {
+						let mut new_ctx = RuntimeContext::new();
+						for (var, expr) in args.iter().zip(call.iter()) {
+							new_ctx
+								.params
+								.insert(var.0.clone(), self.evaluate(ctx, expr)?);
+						}
+						value = self.evaluate(&new_ctx, expr)?;
+					} else {
+						return Err(RuntimeError::CannotCallKind(value.kind()));
+					}
+				}
+			}
+		}
+		Ok(value)
 	}
 
-	pub fn evaluate<R: Rng>(
+	pub fn evaluate(
 		&self,
-		ctx: &RuntimeContext<R>,
+		ctx: &RuntimeContext,
 		expr: &Expression<Op, ExpressionToken>,
 	) -> Result<Value> {
 		self.execute(ctx, expr)?.try_into()
 	}
 
-	pub fn execute<R: Rng>(
+	pub fn execute(
 		&self,
-		ctx: &RuntimeContext<R>,
+		ctx: &RuntimeContext,
 		expr: &Expression<Op, ExpressionToken>,
 	) -> Result<Expression<ExprOpMath, Value>> {
 		self.roll(ctx, &self.valueify(ctx, expr)?)
 	}
 
-	pub fn valueify<R: Rng>(
+	pub fn valueify(
 		&self,
-		ctx: &RuntimeContext<R>,
+		ctx: &RuntimeContext,
 		expr: &Expression<Op, ExpressionToken>,
 	) -> Result<Expression<Op, Value>> {
 		expr
@@ -75,16 +140,17 @@ impl Runtime {
 			.ok()
 	}
 
-	pub fn roll<R: Rng>(
+	pub fn roll(
 		&self,
-		ctx: &RuntimeContext<R>,
+		ctx: &RuntimeContext,
 		expr: &Expression<Op, Value>,
 	) -> Result<Expression<ExprOpMath, Value>> {
 		let rolled = expr.collapse::<_, RuntimeError>(|lhs, op, rhs| match op {
 			Op::Dice => {
 				let count = self.val_expr_component_collapse(ctx, lhs)?;
 				let sides = self.val_expr_component_collapse(ctx, rhs)?;
-				let roll = Roll::create(ctx, &count, &sides)?;
+
+				let roll = Roll::create(self.rng(), &count, &sides)?;
 				*lhs = ExpressionComponent::Token(Value::Roll(roll));
 				Ok(false)
 			}
@@ -122,9 +188,9 @@ impl Runtime {
 		Ok(converted_ops)
 	}
 
-	fn val_expr_component_collapse<R: Rng>(
+	fn val_expr_component_collapse(
 		&self,
-		ctx: &RuntimeContext<R>,
+		ctx: &RuntimeContext,
 		expr: &ExpressionComponent<Op, Value>,
 	) -> Result<Value> {
 		match expr {
@@ -135,9 +201,9 @@ impl Runtime {
 		}
 	}
 
-	pub fn val_expr_collapse<R: Rng>(
+	pub fn val_expr_collapse(
 		&self,
-		ctx: &RuntimeContext<R>,
+		ctx: &RuntimeContext,
 		expr: &Expression<Op, Value>,
 	) -> Result<Value> {
 		self.roll(ctx, expr)?.try_into()
@@ -145,19 +211,14 @@ impl Runtime {
 }
 
 /// For handling context inside of functions
-pub struct RuntimeContext<R: Rng> {
+pub struct RuntimeContext {
 	pub params: BTreeMap<String, Value>,
-	pub rng: RefCell<R>,
 }
 
-impl<R: Rng> RuntimeContext<R> {
-	pub fn rng(&self) -> RefMut<R> {
-		self.rng.borrow_mut()
-	}
-	pub fn new(rng: R) -> Self {
+impl RuntimeContext {
+	pub fn new() -> Self {
 		Self {
 			params: BTreeMap::new(),
-			rng: RefCell::new(rng),
 		}
 	}
 }
@@ -167,14 +228,8 @@ mod test {
 	use super::*;
 	use ivory_tokenizer::Parse;
 
-	fn test_runtime() -> (Runtime, RuntimeContext<impl Rng>) {
-		(
-			Runtime {
-				structs: BTreeMap::new(),
-				variables: BTreeMap::new(),
-			},
-			RuntimeContext::new(rand::thread_rng()),
-		)
+	fn test_runtime() -> (Runtime<impl Rng>, RuntimeContext) {
+		(Runtime::new(rand::thread_rng()), RuntimeContext::new())
 	}
 
 	#[test]
@@ -189,5 +244,39 @@ mod test {
 			.evaluate(&ctx, &Expression::parse("3d6").unwrap().1)
 			.unwrap();
 		println!("{:?}", res);
+	}
+
+	#[test]
+	fn load_module() {
+		let runtime = Runtime::load(
+			rand::thread_rng(),
+			r#"
+		foo = 900;
+		bar = 33;
+		ooer = foo + bar;
+		square = a -> a * a;
+		modifier = score -> (score /_ 2) - 5;
+		"#,
+		)
+		.unwrap();
+		println!("{}", runtime.run("ooer + 1").unwrap());
+		println!("{}", runtime.run("square(5)").unwrap());
+		println!(
+			"{}",
+			runtime
+				.run(
+					r#"[
+			modifier(3),
+			modifier(4),
+			modifier(5),
+			modifier(6),
+			modifier(7),
+			modifier(8),
+			modifier(9),
+			modifier(10)
+		]"#
+				)
+				.unwrap()
+		);
 	}
 }

@@ -8,7 +8,7 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 quick_error! {
 	#[derive(Debug, Clone)]
 	pub enum RuntimeError {
-		Syntax(err: String) {
+		Syntax(err: ivory_tokenizer::TokenizerError) {
 			from()
 			display(s) -> ("Syntax error: {}", err)
 		}
@@ -23,6 +23,24 @@ quick_error! {
 		}
 		NegativeDiceNumber {
 			display(s) -> ("Numbers in dice rolls cannot be negative")
+		}
+		VariableNotFound(var: String) {
+			display(s) -> ("Variable not found: {}", var)
+		}
+		NoPropertyOnKind(kind: ValueKind, prop: String) {
+			display(s) -> ("Can't get prop {} of kind {}", prop, kind)
+		}
+		CannotIndexKind(kind: ValueKind) {
+			display(s) -> ("kind {} cannot be indexed", kind)
+		}
+		CannotCallKind(kind: ValueKind) {
+			display(s) -> ("Can't perform a function call on kind {}", kind)
+		}
+		PropNotFound(prop: String) {
+			display(s) -> ("Cannot find prop {}", prop)
+		}
+		IndexOutOfBounds(i: usize, max: usize) {
+			display(s) -> ("Index {} out of bounds (0 to {})", i, max - 1)
 		}
 	}
 }

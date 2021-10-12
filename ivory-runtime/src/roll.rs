@@ -1,4 +1,7 @@
-use std::fmt::Display;
+use std::{
+	cell::{RefCell, RefMut},
+	fmt::Display,
+};
 
 use crate::{
 	error::RuntimeError,
@@ -33,11 +36,15 @@ impl SingleRoll {
 			kept: None,
 		}
 	}
+
+	pub fn val(&self) -> u32 {
+		self.val
+	}
 }
 
 impl Roll {
 	pub fn create<R: Rng>(
-		ctx: &RuntimeContext<R>,
+		mut rng: RefMut<R>,
 		count: &Value,
 		sides: &Value,
 	) -> Result<Self> {
@@ -50,7 +57,7 @@ impl Roll {
 		}
 		let count = to_dice_num(*count.to_integer()?)?;
 		let sides = to_dice_num(*sides.to_integer()?)?;
-		let mut rng = ctx.rng();
+
 		let mut rolls = Vec::new();
 		for _ in 0..count {
 			rolls.push(SingleRoll::new(rng.gen_range(1..=sides)));
@@ -63,9 +70,9 @@ impl Roll {
 		})
 	}
 
-	pub fn apply_op<R: Rng>(
+	pub fn apply_op(
 		&mut self,
-		ctx: &RuntimeContext<R>,
+		ctx: &RuntimeContext,
 		op: &DiceOp,
 		rhs: &Value,
 	) -> Result<()> {

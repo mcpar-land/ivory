@@ -2,6 +2,7 @@ use std::fmt::{Debug, Display};
 
 pub use module::Module;
 pub use nom::error::ErrorKind;
+
 use nom::IResult;
 
 pub mod accessor;
@@ -19,10 +20,19 @@ pub trait Parse: Sized + Clone + Debug + Display {
 }
 
 /// Tokenize a string into a module.
-pub fn tokenize(input: &str) -> Result<Module, String> {
+pub fn tokenize<T: Parse>(input: &str) -> Result<T, TokenizerError> {
 	use nom::Finish;
-	Module::parse(input)
+	T::parse(input)
 		.finish()
 		.map(|(_, m)| m)
-		.map_err(|e| format!("{}", e))
+		.map_err(|e| TokenizerError(format!("{}", e)))
+}
+
+#[derive(Clone, Debug)]
+pub struct TokenizerError(String);
+
+impl Display for TokenizerError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
+	}
 }

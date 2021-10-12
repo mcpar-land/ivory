@@ -56,6 +56,44 @@ impl Value {
 		}
 	}
 
+	pub fn index(&self, i: &Value) -> Result<Value> {
+		match self {
+			Value::String(s) => {
+				let i = *i.to_integer()? as usize;
+				if let Some(c) = s.chars().nth(i) {
+					Ok(Value::String(c.to_string()))
+				} else {
+					Err(RuntimeError::IndexOutOfBounds(i, s.len()))
+				}
+			}
+			Value::Roll(r) => {
+				let i = *i.to_integer()? as usize;
+				if let Some(dice) = r.rolls.get(i) {
+					Ok(Value::Integer(dice.val() as i32))
+				} else {
+					Err(RuntimeError::IndexOutOfBounds(i, r.rolls.len()))
+				}
+			}
+			Value::Array(a) => {
+				let i = *i.to_integer()? as usize;
+				if let Some(v) = a.get(i) {
+					Ok(v.clone())
+				} else {
+					Err(RuntimeError::IndexOutOfBounds(i, a.len()))
+				}
+			}
+			Value::Object(o) => {
+				let i = i.to_string()?;
+				if let Some(v) = o.get(i) {
+					Ok(v.clone())
+				} else {
+					Err(RuntimeError::PropNotFound(i.clone()))
+				}
+			}
+			_ => Err(RuntimeError::CannotIndexKind(self.kind())),
+		}
+	}
+
 	pub fn run_op(&self, rhs: &Value, op: &Op) -> Result<Value> {
 		use Value::*;
 		match (self, rhs) {
@@ -269,8 +307,8 @@ impl Value {
 
 	pub fn from_token<R: Rng>(
 		token: &ivory_tokenizer::values::Value,
-		runtime: &Runtime,
-		ctx: &RuntimeContext<R>,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
 	) -> Result<Self> {
 		Ok(match token {
 			ivory_tokenizer::values::Value::Boolean(BooleanValue(v)) => {
@@ -480,6 +518,26 @@ impl Display for Value {
 				write!(f, "<function>")
 			}
 		}
+	}
+}
+
+pub enum ValueRef<'a> {
+	Owned(Value),
+	Ref(&'a Value),
+}
+
+impl<'a> ValueRef<'a> {
+	pub fn val(&'a self) -> &'a Value {
+		match self {
+			ValueRef::Owned(v) => &v,
+			ValueRef::Ref(v) => v,
+		}
+	}
+	pub fn set(&'a mut self, v: &'a Value) {
+		*self = ValueRef::Ref(v)
+	}
+	pub fn cloned(&self) -> Value {
+		self.val().clone()
 	}
 }
 
