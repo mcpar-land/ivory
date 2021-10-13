@@ -11,12 +11,12 @@ use ivory_tokenizer::{
 };
 use rand::Rng;
 
-use crate::Result;
 use crate::{
 	error::RuntimeError,
 	roll::Roll,
 	runtime::{Runtime, RuntimeContext},
 };
+use crate::{mod_loader::ModLoader, Result};
 use lazy_static::lazy_static;
 use prec::{Assoc, Climber, Rule, Token};
 use std::{collections::HashMap, convert::TryInto, fmt::Display};

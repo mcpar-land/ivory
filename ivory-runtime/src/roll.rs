@@ -80,12 +80,18 @@ impl Roll {
 	}
 
 	pub fn value(&self) -> u32 {
-		todo!();
+		self.rolls.iter().fold(0, |sum, roll| sum + roll.val())
+	}
+}
+
+impl Display for SingleRoll {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.val())
 	}
 }
 
 impl Display for Roll {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		todo!()
+		write!(f, "<{}d{}: {}>", self.count, self.sides, self.value())
 	}
 }

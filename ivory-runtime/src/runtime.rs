@@ -1,4 +1,6 @@
-use crate::{roll::Roll, value::Value, Result, RuntimeError};
+use crate::{
+	mod_loader::ModLoader, roll::Roll, value::Value, Result, RuntimeError,
+};
 use ivory_expression::{Expression, ExpressionComponent};
 use ivory_tokenizer::{
 	accessor::{Accessor, AccessorComponent},
@@ -32,7 +34,7 @@ impl<R: Rng> Runtime<R> {
 	pub fn rng(&self) -> RefMut<R> {
 		self.rng.borrow_mut()
 	}
-	pub fn load(rng: R, input: &str) -> Result<Self> {
+	pub fn load(&mut self, input: &str) -> Result<()> {
 		let module = tokenize::<Module>(input)?;
 
 		let mut structs = BTreeMap::new();
@@ -47,11 +49,14 @@ impl<R: Rng> Runtime<R> {
 			}
 		}
 
-		Ok(Self {
-			structs,
-			variables,
-			rng: RefCell::new(rng),
-		})
+		self.structs = structs;
+		self.variables = variables;
+
+		Ok(())
+	}
+
+	pub fn load_module(&mut self, name: &str, input: &str) -> Result<()> {
+		todo!();
 	}
 
 	pub fn run(&self, cmd: &str) -> Result<Expression<ExprOpMath, Value>> {
@@ -208,6 +213,13 @@ impl<R: Rng> Runtime<R> {
 	) -> Result<Value> {
 		self.roll(ctx, expr)?.try_into()
 	}
+
+	pub fn math_to_value(
+		&self,
+		expr: Expression<ExprOpMath, Value>,
+	) -> Result<Value> {
+		Ok(expr.try_into()?)
+	}
 }
 
 /// For handling context inside of functions
@@ -225,6 +237,8 @@ impl RuntimeContext {
 
 #[cfg(test)]
 mod test {
+	use crate::mod_loader::RawLoader;
+
 	use super::*;
 	use ivory_tokenizer::Parse;
 
@@ -248,17 +262,18 @@ mod test {
 
 	#[test]
 	fn load_module() {
-		let runtime = Runtime::load(
-			rand::thread_rng(),
-			r#"
+		let mut runtime = Runtime::new(rand::thread_rng());
+		runtime
+			.load(
+				r#"
 		foo = 900;
 		bar = 33;
 		ooer = foo + bar;
 		square = a -> a * a;
 		modifier = score -> (score /_ 2) - 5;
 		"#,
-		)
-		.unwrap();
+			)
+			.unwrap();
 		println!("{}", runtime.run("ooer + 1").unwrap());
 		println!("{}", runtime.run("square(5)").unwrap());
 		println!(
@@ -278,5 +293,7 @@ mod test {
 				)
 				.unwrap()
 		);
+		println!("{}", runtime.run("1d20").unwrap());
+		println!("{}", runtime.run("1d square(5)").unwrap());
 	}
 }

@@ -4,5 +4,6 @@
 members = [
 	"ivory-tokenizer",
 	"ivory-runtime",
-	"ivory-expression"
+	"ivory-expression",
+	"ivory-repl"
 ]
