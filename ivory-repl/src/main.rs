@@ -75,6 +75,10 @@ fn main() {
 	if let Some(run) = run {
 		app.run(run).expect("error running expression");
 	} else {
+		ctrlc::set_handler(move || {
+			exit(0);
+		})
+		.expect("Error setting Ctrl-C handler");
 		app.run_loop();
 	}
 }
