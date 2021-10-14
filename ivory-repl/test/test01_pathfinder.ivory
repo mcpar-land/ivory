@@ -1,18 +1,24 @@
-use foo, bar, foo_bar as foobar from "./test01.ivory";
-
-str = 10;
-dex = 10;
+str = 15 + 1;
+dex = 15;
 con = 10;
-int = 10;
+int = 11 + 1;
 wis = 10;
-cha = 10;
+cha = 19 + 2;
 
-stat_mod = stat -> (stat /_ 2) - 5;
-stat_check = stat -> 1d20 + stat_mod(stat);
+ability_mod = ability -> ( ability - 10 ) /_ 2;
 
-str_mod = stat_mod(str);
-dex_mod = stat_mod(dex);
-con_mod = stat_mod(con);
-int_mod = stat_mod(int);
-wis_mod = stat_mod(wis);
-cha_mod = stat_mod(cha);
+str_mod = ability_mod(str);
+dex_mod = ability_mod(dex);
+con_mod = ability_mod(con);
+int_mod = ability_mod(int);
+wis_mod = ability_mod(wis);
+cha_mod = ability_mod(cha);
+
+ability_check = ability -> 1d20 + ability_mod(ability);
+
+str_check = ability_check(str);
+dex_check = ability_check(dex);
+con_check = ability_check(con);
+int_check = ability_check(int);
+wis_check = ability_check(wis);
+cha_check = ability_check(cha);
