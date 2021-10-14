@@ -3,10 +3,11 @@ use ivory_tokenizer::{
 		math::{ExprOpMath, ExprOpMathKind, ExprOpMathRound},
 		Op,
 	},
+	itype::Type,
 	values::{
 		array::ArrayValue, boolean::BooleanValue, decimal::DecimalValue,
 		function::FunctionValue, integer::IntegerValue, object::ObjectValue,
-		string::StringValue, struct_instance::StructInstance,
+		string::StringValue,
 	},
 };
 use rand::Rng;
@@ -16,9 +17,8 @@ use crate::{
 	roll::Roll,
 	runtime::{Runtime, RuntimeContext},
 };
-use crate::{mod_loader::ModLoader, Result};
-use lazy_static::lazy_static;
-use prec::{Assoc, Climber, Rule, Token};
+use crate::{struct_value::StructValue, Result};
+
 use std::{collections::HashMap, convert::TryInto, fmt::Display};
 
 static K_INTEGER: &'static str = "int";
@@ -40,9 +40,27 @@ pub enum Value {
 	Array(Vec<Value>),
 	Object(HashMap<String, Value>),
 	Function(FunctionValue),
+	Struct(StructValue),
 }
 
 impl Value {
+	pub fn val_type(&self) -> Type {
+		match self {
+			Value::Integer(_) => Type::Integer,
+			Value::Decimal(_) => Type::Decimal,
+			Value::Boolean(_) => Type::Boolean,
+			Value::String(_) => Type::String,
+			Value::Roll(_) => Type::Roll,
+			Value::Array(vals) => Type::Array({
+				todo!();
+			}),
+			Value::Object(_) => Type::Object,
+			Value::Function(_) => todo!(),
+			Value::Struct(_) => todo!(),
+		}
+	}
+
+	/// Less specific than val_type
 	pub fn kind(&self) -> ValueKind {
 		match self {
 			Value::Integer(_) => ValueKind::Integer,
@@ -53,6 +71,7 @@ impl Value {
 			Value::Array(_) => ValueKind::Array,
 			Value::Object(_) => ValueKind::Object,
 			Value::Function(_) => ValueKind::Function,
+			Value::Struct(_) => ValueKind::Object,
 		}
 	}
 
@@ -352,6 +371,11 @@ impl Value {
 			ivory_tokenizer::values::Value::Function(f) => Value::Function(f.clone()),
 		})
 	}
+
+	/// Returns true if values have the same type
+	pub fn eq_type(&self, other: &Value) -> bool {
+		todo!();
+	}
 }
 
 impl PartialEq for Value {
@@ -525,6 +549,9 @@ impl Display for Value {
 			}
 			Value::Function(_) => {
 				write!(f, "<function>")
+			}
+			Value::Struct(s) => {
+				write!(f, "{}", s)
 			}
 		}
 	}

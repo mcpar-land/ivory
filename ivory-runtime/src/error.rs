@@ -42,5 +42,11 @@ quick_error! {
 		IndexOutOfBounds(i: usize, max: usize) {
 			display(s) -> ("Index {} out of bounds (0 to {})", i, max - 1)
 		}
+		StructNotFound(struct_name: String) {
+			display(s) -> ("Struct type {} not found", struct_name)
+		}
+		FieldNotOnStruct(struct_name: String, field_name: String) {
+			display(s) -> ("Field {} not present on struct {}", field_name, struct_name)
+		}
 	}
 }
