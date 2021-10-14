@@ -35,3 +35,38 @@ impl Display for Module {
 		)
 	}
 }
+
+#[cfg(test)]
+#[test]
+fn parse_module() {
+	crate::util::test_multiple::<Module>(&[
+		r#"
+		use * from "wahifujdfdsaf";
+		use a, b, c from "9egtuh";
+
+		struct Foo {
+			bar: int,
+			baz: string
+		}
+
+		x = 10 + 100;
+		y = a -> bcdefg;
+		bazinga = [1, 2, 3, 4];
+		"#,
+		r#"
+		
+		
+		struct Bar {
+			a: decimal
+		}
+		
+		
+		"#,
+	]);
+
+	crate::util::test_multiple_should_fail::<Module>(&[r#"
+		struct Foo {
+			bar: int
+		} x = 10;
+		"#])
+}

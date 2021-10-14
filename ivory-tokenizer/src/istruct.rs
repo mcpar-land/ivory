@@ -1,15 +1,24 @@
 use std::{collections::HashMap, fmt::Display};
 
+use ivory_expression::Expression;
 use nom::{
-	bytes::complete::tag,
-	character::complete::{multispace0, multispace1},
+	branch::alt,
+	bytes::complete::{tag, take_while},
+	character::{
+		complete::{alphanumeric0, multispace0, multispace1, one_of},
+		is_alphanumeric,
+	},
 	combinator::map,
 	multi::separated_list0,
 	sequence::{delimited, pair, preceded, separated_pair, tuple},
 };
 
 use crate::{
-	itype::Type, util::variable_name, values::Value, variable::VariableName,
+	expression::{ExpressionToken, Op},
+	itype::Type,
+	util::variable_name,
+	values::Value,
+	variable::VariableName,
 	Parse,
 };
 
@@ -44,35 +53,49 @@ impl Parse for StructDefinition {
 
 impl Display for StructDefinition {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		todo!()
+		write!(
+			f,
+			"struct {} {{\n{}}}",
+			self.name,
+			self.values.iter().fold(String::new(), |s, (name, val)| {
+				format!("{}\t{}: {},\n", s, name, val)
+			})
+		)
 	}
 }
 
 #[derive(Clone, Debug)]
 pub enum StructDefinitionValue {
-	Value(Value),
+	Value(Expression<Op, ExpressionToken>),
 	Type(Type),
 }
 
 impl Parse for StructDefinitionValue {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		todo!()
+		alt((
+			map(Type::parse, |t| Self::Type(t)),
+			map(Expression::<Op, ExpressionToken>::parse, |v| Self::Value(v)),
+		))(input)
 	}
 }
 
 impl Display for StructDefinitionValue {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		todo!()
+		match self {
+			StructDefinitionValue::Value(v) => write!(f, "{}", v),
+			StructDefinitionValue::Type(t) => write!(f, "{}", t),
+		}
 	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StructName(String);
+pub struct StructName(pub String);
 
 impl Parse for StructName {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		let (input, val) = variable_name(input)?;
-		Ok((input, Self(val.to_string())))
+		let (input, capital) = one_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ")(input)?;
+		let (input, rest_of) = alphanumeric0(input)?;
+		Ok((input, Self(format!("{}{}", capital, rest_of))))
 	}
 }
 
@@ -80,4 +103,22 @@ impl Display for StructName {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{}", self.0)
 	}
+}
+
+#[cfg(test)]
+#[test]
+fn test_struct_name() {
+	assert!(StructName::parse("ValidStructName").is_ok());
+	assert!(StructName::parse("invalid_struct_name").is_err());
+}
+
+#[test]
+fn test_struct_def() {
+	use crate::util::test_multiple;
+
+	test_multiple::<StructDefinition>(&[
+		"struct Foo { bar: string, baz: int, qux: int[] }",
+		"struct Foo { bar: string, baz: 69, qux: frindle }",
+		"struct Bingus { my_beloved: a -> a + 5 }",
+	]);
 }

@@ -33,7 +33,16 @@ pub fn variable_name(input: &str) -> IResult<&str, &str> {
 pub fn test_multiple<'a, T: Parse>(inputs: &[&'a str]) {
 	for input in inputs {
 		match T::parse(input) {
-			Ok(val) => println!("{}", val.1),
+			Ok(val) => {
+				if val.0.len() != 0 {
+					panic!(
+						"Error parsing \"{}\" \n unfinished input: \n \"{}\"",
+						input, val.0
+					);
+				} else {
+					println!("{}", val.1);
+				}
+			}
 			Err(err) => panic!("Error parsing \"{}\" -> {:?}", input, err),
 		}
 	}

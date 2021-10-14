@@ -4,8 +4,8 @@ use nom::{
 	branch::alt,
 	bytes::complete::tag,
 	character::complete::multispace0,
-	combinator::{map, value},
-	multi::separated_list1,
+	combinator::{map, opt, value},
+	multi::{many0, separated_list1},
 	sequence::{delimited, pair, separated_pair, terminated, tuple},
 };
 
@@ -29,7 +29,7 @@ pub enum Type {
 
 impl Parse for Type {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		alt((
+		let (input, mut first) = alt((
 			value(Self::Any, tag("any")),
 			value(Self::Integer, tag("int")),
 			value(Self::Decimal, tag("decimal")),
@@ -38,10 +38,14 @@ impl Parse for Type {
 			value(Self::String, tag("string")),
 			value(Self::Object, tag("object")),
 			map(StructName::parse, |name| Self::Struct(name)),
-			map(terminated(Type::parse, tag("[]")), |t| {
-				Self::Array(Box::new(t))
-			}),
-		))(input)
+		))(input)?;
+		let (input, arr_tag) = many0(tag("[]"))(input)?;
+
+		for _ in 0..arr_tag.len() {
+			first = Self::Array(Box::new(first));
+		}
+
+		Ok((input, first))
 	}
 }
 
@@ -49,7 +53,7 @@ impl Display for Type {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Type::Any => write!(f, "any"),
-			Type::Integer => write!(f, "integer"),
+			Type::Integer => write!(f, "int"),
 			Type::Decimal => write!(f, "decimal"),
 			Type::Boolean => write!(f, "bool"),
 			Type::Roll => write!(f, "roll"),
@@ -138,4 +142,19 @@ impl Display for ObjectLiteralType {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{{object literal}}")
 	}
+}
+
+#[cfg(test)]
+#[test]
+fn test_type() {
+	crate::util::test_multiple::<Type>(&[
+		"string",
+		"bool",
+		"int",
+		"decimal",
+		"int[]",
+		"SomeStruct",
+		"SomeOtherStruct[]",
+		"int[][]",
+	]);
 }

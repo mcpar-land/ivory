@@ -5,6 +5,7 @@ use ivory_expression::{Expression, ExpressionComponent};
 use ivory_tokenizer::{
 	accessor::{Accessor, AccessorComponent},
 	expression::{math::ExprOpMath, ExpressionToken, Op},
+	istruct::StructDefinition,
 	tokenize,
 	values::function::FunctionValue,
 	variable::Variable,
@@ -46,7 +47,9 @@ impl<R: Rng> Runtime<R> {
 				ivory_tokenizer::commands::Command::Variable(variable) => {
 					variables.insert(variable.name.0.clone(), variable);
 				}
-				ivory_tokenizer::commands::Command::StructDefinition => todo!(),
+				ivory_tokenizer::commands::Command::StructDefinition(d) => {
+					structs.insert(d.name.0.clone(), d);
+				}
 				ivory_tokenizer::commands::Command::Use(_) => todo!(),
 			}
 		}
@@ -224,7 +227,7 @@ impl<R: Rng> Runtime<R> {
 }
 
 pub struct RuntimeValues {
-	pub structs: BTreeMap<String, ()>,
+	pub structs: BTreeMap<String, StructDefinition>,
 	pub variables: BTreeMap<String, Variable>,
 }
 
