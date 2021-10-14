@@ -8,23 +8,24 @@ use nom::{
 	sequence::{delimited, pair, terminated, tuple},
 };
 
-use crate::{variable::Variable, Parse};
+use crate::{module::iuse::Use, variable::Variable, Parse};
 
 #[derive(Clone, Debug)]
 pub enum Command {
+	Use(Use),
 	Variable(Variable),
 	StructDefinition, // TODO
 }
 
 impl Parse for Command {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		map(
-			delimited(
-				multispace0,
-				Variable::parse,
-				tuple((multispace0, tag(";"), multispace0)),
-			),
-			|v| Self::Variable(v),
+		delimited(
+			multispace0,
+			alt((
+				map(Variable::parse, |v| Self::Variable(v)),
+				map(Use::parse, |v| Self::Use(v)),
+			)),
+			tuple((multispace0, tag(";"), multispace0)),
 		)(input)
 	}
 }
@@ -34,6 +35,7 @@ impl Display for Command {
 		match self {
 			Command::Variable(v) => write!(f, "{}", v),
 			Command::StructDefinition => write!(f, "StructDefinition"),
+			Command::Use(u) => write!(f, "{}", u),
 		}
 	}
 }

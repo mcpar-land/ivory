@@ -2,7 +2,7 @@ use std::fs::File;
 
 use crate::error::ReplError;
 use ivory_runtime::runtime::Runtime;
-use ivory_tokenizer::Module;
+use ivory_tokenizer::{tokenize, Module};
 use rand::Rng;
 
 pub struct FileLoader {}
@@ -16,6 +16,10 @@ impl FileLoader {
 		let contents = std::fs::read_to_string(url)?;
 		runtime.load(&contents)?;
 		Ok(())
+	}
+	pub fn get_module(&self, url: &str) -> Result<Module, ReplError> {
+		let contents = std::fs::read_to_string(url)?;
+		Ok(tokenize(&contents)?)
 	}
 }
 

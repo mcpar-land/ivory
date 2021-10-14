@@ -9,6 +9,8 @@ use nom::{
 
 use crate::{commands::Command, Parse};
 
+pub mod iuse;
+
 #[derive(Clone, Debug)]
 pub struct Module(pub Vec<Command>);
 

@@ -1,3 +1,5 @@
+use foo, bar, foo_bar as foobar from "./test01.ivory";
+
 str = 10;
 dex = 10;
 con = 10;

@@ -9,7 +9,7 @@ use crate::{
 	value::Value,
 	Result,
 };
-use ivory_tokenizer::expression::dice_ops::DiceOp;
+use ivory_tokenizer::expression::dice_ops::{DiceCmp, DiceOp, DiceOpCmp};
 use rand::Rng;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -21,6 +21,7 @@ pub struct Roll {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SingleRoll {
+	pub sides: u32,
 	pub val: u32,
 	pub rerolls: Vec<u32>,
 	pub explodes: Vec<u32>,
@@ -28,8 +29,9 @@ pub struct SingleRoll {
 }
 
 impl SingleRoll {
-	pub fn new(val: u32) -> Self {
+	pub fn new(sides: u32, val: u32) -> Self {
 		Self {
+			sides,
 			val,
 			rerolls: Vec::new(),
 			explodes: Vec::new(),
@@ -37,30 +39,68 @@ impl SingleRoll {
 		}
 	}
 
+	pub fn new_rolled<R: Rng>(runtime: &Runtime<R>, sides: u32) -> Self {
+		let mut s = Self::new(sides, 0);
+		s.roll(runtime);
+		s
+	}
+
 	pub fn val(&self) -> u32 {
-		self.val
+		self.val + self.explodes.iter().fold(0, |sum, v| sum + v)
+	}
+
+	pub fn roll<R: Rng>(&mut self, runtime: &Runtime<R>) {
+		let mut rng = runtime.rng();
+		self.val = rng.gen_range(1..=self.sides);
+	}
+
+	pub fn apply_op<R: Rng>(
+		&mut self,
+		runtime: &Runtime<R>,
+		op: &DiceOp,
+		rhs: &Value,
+	) -> Result<()> {
+		match &op.op {
+			DiceOpCmp::Keep => {
+				if do_cmp(self.val(), &op.cmp, rhs.to_uint()?) {
+					self.kept = Some(true)
+				} else {
+					self.kept = Some(false)
+				}
+			}
+			DiceOpCmp::Reroll => {
+				if do_cmp(self.val(), &op.cmp, rhs.to_uint()?) {
+					self.rerolls.push(self.val);
+				}
+			}
+			DiceOpCmp::RerollContinuous => {
+				todo!()
+			}
+			DiceOpCmp::Explode => {
+				if do_cmp(self.val(), &op.cmp, rhs.to_uint()?) {
+					self.explodes.push(runtime.rng().gen_range(1..=self.sides));
+				}
+			}
+			DiceOpCmp::ExplodeContinuous => {
+				todo!()
+			}
+		}
+		Ok(())
 	}
 }
 
 impl Roll {
 	pub fn create<R: Rng>(
-		mut rng: RefMut<R>,
+		runtime: &Runtime<R>,
 		count: &Value,
 		sides: &Value,
 	) -> Result<Self> {
-		fn to_dice_num(num: i32) -> Result<u32> {
-			if num < 0 {
-				Err(RuntimeError::NegativeDiceNumber)
-			} else {
-				Ok(num as u32)
-			}
-		}
-		let count = to_dice_num(*count.to_integer()?)?;
-		let sides = to_dice_num(*sides.to_integer()?)?;
+		let count = count.to_uint()?;
+		let sides = sides.to_uint()?;
 
 		let mut rolls = Vec::new();
 		for _ in 0..count {
-			rolls.push(SingleRoll::new(rng.gen_range(1..=sides)));
+			rolls.push(SingleRoll::new_rolled(runtime, sides));
 		}
 
 		Ok(Roll {
@@ -70,13 +110,16 @@ impl Roll {
 		})
 	}
 
-	pub fn apply_op(
+	pub fn apply_op<R: Rng>(
 		&mut self,
-		ctx: &RuntimeContext,
+		runtime: &Runtime<R>,
 		op: &DiceOp,
 		rhs: &Value,
 	) -> Result<()> {
-		todo!();
+		for roll in self.rolls.iter_mut() {
+			roll.apply_op(runtime, op, rhs)?;
+		}
+		Ok(())
 	}
 
 	pub fn value(&self) -> u32 {
@@ -93,5 +136,15 @@ impl Display for SingleRoll {
 impl Display for Roll {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "<{}d{}: {}>", self.count, self.sides, self.value())
+	}
+}
+
+fn do_cmp(a: u32, cmp: &DiceCmp, b: u32) -> bool {
+	match cmp {
+		DiceCmp::Gt => a > b,
+		DiceCmp::Lt => a < b,
+		DiceCmp::Eq => a == b,
+		DiceCmp::GtEq => a >= b,
+		DiceCmp::LtEq => a <= b,
 	}
 }

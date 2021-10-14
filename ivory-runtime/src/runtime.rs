@@ -18,16 +18,17 @@ use std::{
 };
 
 pub struct Runtime<R: Rng> {
-	pub structs: BTreeMap<String, ()>,
-	pub variables: BTreeMap<String, Variable>,
+	pub values: RuntimeValues,
 	pub rng: RefCell<R>,
 }
 
 impl<R: Rng> Runtime<R> {
 	pub fn new(rng: R) -> Self {
 		Self {
-			structs: BTreeMap::new(),
-			variables: BTreeMap::new(),
+			values: RuntimeValues {
+				structs: BTreeMap::new(),
+				variables: BTreeMap::new(),
+			},
 			rng: RefCell::new(rng),
 		}
 	}
@@ -46,11 +47,10 @@ impl<R: Rng> Runtime<R> {
 					variables.insert(variable.name.0.clone(), variable);
 				}
 				ivory_tokenizer::commands::Command::StructDefinition => todo!(),
+				ivory_tokenizer::commands::Command::Use(_) => todo!(),
 			}
 		}
-
-		self.structs = structs;
-		self.variables = variables;
+		self.values = RuntimeValues { structs, variables };
 
 		Ok(())
 	}
@@ -73,6 +73,7 @@ impl<R: Rng> Runtime<R> {
 			Some(param) => param.clone(),
 			None => {
 				let val = self
+					.values
 					.variables
 					.get(&var.0)
 					.ok_or_else(|| RuntimeError::VariableNotFound(var.0.clone()))?;
@@ -155,7 +156,7 @@ impl<R: Rng> Runtime<R> {
 				let count = self.val_expr_component_collapse(ctx, lhs)?;
 				let sides = self.val_expr_component_collapse(ctx, rhs)?;
 
-				let roll = Roll::create(self.rng(), &count, &sides)?;
+				let roll = Roll::create(self, &count, &sides)?;
 				*lhs = ExpressionComponent::Token(Value::Roll(roll));
 				Ok(false)
 			}
@@ -169,12 +170,12 @@ impl<R: Rng> Runtime<R> {
 						ExpressionComponent::Token(token) => {
 							let roll = token.mut_roll()?;
 							let rhs = self.val_expr_component_collapse(ctx, rhs)?;
-							roll.apply_op(ctx, op, &rhs)?;
+							roll.apply_op(self, op, &rhs)?;
 						}
 						ExpressionComponent::Paren(paren) => {
 							let rhs = self.val_expr_component_collapse(ctx, rhs)?;
 							paren.run_mut(|val| match val {
-								Value::Roll(roll) => roll.apply_op(ctx, op, &rhs),
+								Value::Roll(roll) => roll.apply_op(self, op, &rhs),
 								_ => Ok(()),
 							})?;
 						}
@@ -220,6 +221,11 @@ impl<R: Rng> Runtime<R> {
 	) -> Result<Value> {
 		Ok(expr.try_into()?)
 	}
+}
+
+pub struct RuntimeValues {
+	pub structs: BTreeMap<String, ()>,
+	pub variables: BTreeMap<String, Variable>,
 }
 
 /// For handling context inside of functions

@@ -6,6 +6,9 @@ quick_error! {
 		Runtime(err: ivory_runtime::RuntimeError) {
 			from()
 		}
+		Tokenizer(err: ivory_tokenizer::TokenizerError) {
+			from()
+		}
 		Io(err: String) {
 			from(err: std::io::Error) -> (err.to_string())
 		}

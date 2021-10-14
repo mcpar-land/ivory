@@ -138,6 +138,15 @@ impl Value {
 		}
 	}
 
+	pub fn to_uint(&self) -> Result<u32> {
+		let i = *self.to_integer()?;
+		if i < 0 {
+			Err(RuntimeError::NegativeDiceNumber)
+		} else {
+			Ok(i as u32)
+		}
+	}
+
 	pub fn to_decimal(&self) -> Result<&f32> {
 		if let Self::Decimal(v) = self {
 			Ok(v)

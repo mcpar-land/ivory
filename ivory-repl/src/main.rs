@@ -26,6 +26,8 @@ impl App {
 	}
 
 	fn run_loop(&mut self) {
+		let mut history: Vec<String> = Vec::new();
+		let mut hpos: usize = 0;
 		loop {
 			print!("ivory ~ ");
 			std::io::stdout().flush().unwrap();
@@ -51,6 +53,13 @@ fn main() {
 				.required(false),
 		)
 		.arg(
+			Arg::with_name("DEBUG")
+				.short("d")
+				.long("debug")
+				.help("Print a debug tree of the module")
+				.required(false),
+		)
+		.arg(
 			Arg::with_name("RUN")
 				.short("r")
 				.long("run")
@@ -61,11 +70,20 @@ fn main() {
 
 	let file = matches.value_of("FILE");
 	let run = matches.value_of("RUN");
+	let debug = matches.is_present("DEBUG");
 
 	let mut runtime = Runtime::new(rand::thread_rng());
 	let mut loader = FileLoader {};
 
 	if let Some(file) = file {
+		if debug {
+			let module = loader
+				.get_module(file)
+				.expect("Error loading module for debug");
+			println!("{:#?}", module);
+			std::io::stdout().flush().unwrap();
+			exit(0);
+		}
 		loader
 			.load(&mut runtime, file)
 			.expect("Unable to load file");
