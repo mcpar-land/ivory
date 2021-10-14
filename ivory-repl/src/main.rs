@@ -11,6 +11,7 @@ use ivory_runtime::{
 	value::Value,
 };
 use rand::prelude::ThreadRng;
+use rustyline::{error::ReadlineError, Editor};
 struct App {
 	runtime: Runtime<ThreadRng>,
 	loader: FileLoader,
@@ -26,19 +27,28 @@ impl App {
 	}
 
 	fn run_loop(&mut self) {
-		let mut history: Vec<String> = Vec::new();
-		let mut hpos: usize = 0;
+		let mut rl = Editor::<()>::new();
 		loop {
-			print!("ivory ~ ");
-			std::io::stdout().flush().unwrap();
-			let mut line = String::new();
-			std::io::stdin()
-				.read_line(&mut line)
-				.expect("Error reading line");
-			if let Err(err) = self.run(&line) {
-				println!("{}", err);
-			} else {
-				println!("");
+			match rl.readline("ivory ~ ") {
+				Ok(line) => {
+					rl.add_history_entry(&line);
+					if let Err(err) = self.run(&line) {
+						println!("{}", err);
+					} else {
+						println!("");
+					}
+				}
+				Err(ReadlineError::Interrupted) => {
+					println!("Ctrl+C");
+					break;
+				}
+				Err(ReadlineError::Eof) => {
+					println!("Ctrl+D");
+					break;
+				}
+				Err(err) => {
+					println!("Error reading line: {}", err);
+				}
 			}
 		}
 	}
@@ -93,10 +103,6 @@ fn main() {
 	if let Some(run) = run {
 		app.run(run).expect("error running expression");
 	} else {
-		ctrlc::set_handler(move || {
-			exit(0);
-		})
-		.expect("Error setting Ctrl-C handler");
 		app.run_loop();
 	}
 }

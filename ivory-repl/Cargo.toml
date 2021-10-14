@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.3"
-ctrlc = "3.2.1"
+rustyline = "9.0.0"
 rand = "0.8.4"
 quick-error = "2.0.1"
 ivory-runtime = { path = "../ivory-runtime" }
