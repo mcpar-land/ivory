@@ -19,7 +19,7 @@ struct App {
 
 impl App {
 	fn run(&mut self, cmd: &str) -> Result<(), ReplError> {
-		let res_eq = self.runtime.run(cmd)?;
+		let res_eq = self.runtime.run(cmd)?.un_nest();
 		let res_eq_str = format!("{}", res_eq);
 		let res_val: Value = res_eq.try_into()?;
 		println!("{} = {}", res_eq_str, res_val);

@@ -41,6 +41,22 @@ impl<O: Clone, T: Clone> ExpressionComponent<O, T> {
 		}
 	}
 
+	pub fn try_map_tokens_components<F, Nt, E>(
+		&self,
+		f: F,
+	) -> Result<ExpressionComponent<O, Nt>, E>
+	where
+		F: Fn(&T) -> Result<ExpressionComponent<O, Nt>, E> + Copy,
+		Nt: Clone,
+	{
+		Ok(match self {
+			ExpressionComponent::Paren(p) => {
+				ExpressionComponent::Paren(Box::new(p.try_map_tokens_components(f)?))
+			}
+			ExpressionComponent::Token(t) => f(t)?,
+		})
+	}
+
 	pub fn run_mut<M, E>(&mut self, m: M) -> Result<(), E>
 	where
 		M: Fn(&mut T) -> Result<(), E> + Copy,
@@ -64,6 +80,13 @@ impl<'a, O: Clone, T: Clone, E: Clone> ExpressionComponent<O, Result<T, E>> {
 }
 
 impl<O: Clone, T: Clone> Expression<O, T> {
+	pub fn new(first: T) -> Self {
+		Self {
+			first: ExpressionComponent::Token(first),
+			pairs: Vec::new(),
+		}
+	}
+
 	/// Returns self.first if i is 0
 	pub fn get_component(&self, i: usize) -> Option<&ExpressionComponent<O, T>> {
 		if i == 0 {
@@ -147,6 +170,26 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		new_expr
 	}
 
+	pub fn try_map_tokens_components<Nt, F, E>(
+		&self,
+		f: F,
+	) -> Result<Expression<O, Nt>, E>
+	where
+		F: Fn(&T) -> Result<ExpressionComponent<O, Nt>, E> + Copy,
+		Nt: Clone,
+	{
+		let mut new_expr = Expression {
+			first: self.first.try_map_tokens_components(f)?,
+			pairs: Vec::new(),
+		};
+		for Pair(op, component) in &self.pairs {
+			new_expr
+				.pairs
+				.push(Pair(op.clone(), component.try_map_tokens_components(f)?));
+		}
+		Ok(new_expr)
+	}
+
 	/// run a closure over every pair.
 	/// return true to keep the pair in the result
 	/// return false to drop it from the result
@@ -218,6 +261,22 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 			component.run_mut(m)?;
 		}
 		Ok(())
+	}
+
+	/// get rid of single nested parentheses
+	pub fn un_nest(self) -> Self {
+		if let ExpressionComponent::Paren(inner) = self.first {
+			if self.pairs.len() == 0 {
+				inner.un_nest()
+			} else {
+				Self {
+					first: ExpressionComponent::Paren(inner),
+					pairs: self.pairs,
+				}
+			}
+		} else {
+			self
+		}
 	}
 }
 

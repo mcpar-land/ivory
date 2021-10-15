@@ -71,8 +71,8 @@ impl<R: Rng> Runtime<R> {
 		&self,
 		ctx: &RuntimeContext,
 		Accessor(var, components): &Accessor,
-	) -> Result<Value> {
-		let mut value = match ctx.params.get(&var.0) {
+	) -> Result<Expression<Op, Value>> {
+		let mut expr = match ctx.params.get(&var.0) {
 			Some(param) => param.clone(),
 			None => {
 				let val = self
@@ -80,44 +80,50 @@ impl<R: Rng> Runtime<R> {
 					.variables
 					.get(&var.0)
 					.ok_or_else(|| RuntimeError::VariableNotFound(var.0.clone()))?;
-				self.evaluate(ctx, &val.value)?
+				self.valueify(ctx, &val.value)?
 			}
 		};
 		for component in components {
+			let previous_value = self.val_expr_collapse(ctx, &expr)?;
 			match component {
 				AccessorComponent::Property(prop) => {
-					if let Value::Object(obj) = &value {
+					if let Value::Object(obj) = &previous_value {
 						if let Some(p) = obj.get(&prop.0) {
-							value = p.clone();
+							expr = Expression::new(p.clone());
 						} else {
 							return Err(RuntimeError::PropNotFound(prop.0.clone()));
 						}
 					} else {
 						return Err(RuntimeError::NoPropertyOnKind(
-							value.kind(),
+							previous_value.kind(),
 							prop.0.clone(),
 						));
 					}
 				}
 				AccessorComponent::Index(i) => {
-					value = value.index(&self.evaluate(ctx, i)?)?;
+					expr =
+						Expression::new(previous_value.index(&self.evaluate(ctx, i)?)?);
 				}
 				AccessorComponent::Call(call) => {
-					if let Value::Function(FunctionValue { args, expr }) = &value {
+					if let Value::Function(FunctionValue {
+						args,
+						expr: fn_expr,
+					}) = &previous_value
+					{
 						let mut new_ctx = RuntimeContext::new();
 						for (var, expr) in args.iter().zip(call.iter()) {
 							new_ctx
 								.params
-								.insert(var.0.clone(), self.evaluate(ctx, expr)?);
+								.insert(var.0.clone(), self.valueify(ctx, expr)?);
 						}
-						value = self.evaluate(&new_ctx, expr)?;
+						expr = self.valueify(&new_ctx, fn_expr)?;
 					} else {
-						return Err(RuntimeError::CannotCallKind(value.kind()));
+						return Err(RuntimeError::CannotCallKind(previous_value.kind()));
 					}
 				}
 			}
 		}
-		Ok(value)
+		Ok(expr.un_nest())
 	}
 
 	pub fn evaluate(
@@ -141,12 +147,14 @@ impl<R: Rng> Runtime<R> {
 		ctx: &RuntimeContext,
 		expr: &Expression<Op, ExpressionToken>,
 	) -> Result<Expression<Op, Value>> {
-		expr
-			.map_tokens(|token| match token {
-				ExpressionToken::Value(val) => Value::from_token(val, &self, ctx),
-				ExpressionToken::Accessor(accessor) => self.access(ctx, accessor),
-			})
-			.ok()
+		expr.try_map_tokens_components(|token| match token {
+			ExpressionToken::Value(val) => Ok(ExpressionComponent::Token(
+				Value::from_token(val, &self, ctx)?,
+			)),
+			ExpressionToken::Accessor(accessor) => Ok(ExpressionComponent::Paren(
+				Box::new(self.access(ctx, accessor)?),
+			)),
+		})
 	}
 
 	pub fn roll(
@@ -233,7 +241,7 @@ pub struct RuntimeValues {
 
 /// For handling context inside of functions
 pub struct RuntimeContext {
-	pub params: BTreeMap<String, Value>,
+	pub params: BTreeMap<String, Expression<Op, Value>>,
 }
 
 impl RuntimeContext {
