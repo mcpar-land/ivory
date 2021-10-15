@@ -1,7 +1,15 @@
-use std::{convert::TryInto, fs::File, io::Write, process::exit};
+use colored::*;
+use std::{
+	convert::TryInto,
+	fs::File,
+	io::Write,
+	path::{Path, PathBuf},
+	process::exit,
+};
 
 mod error;
 mod files;
+mod hint;
 
 use crate::error::ReplError;
 use clap::Arg;
@@ -29,7 +37,11 @@ impl App {
 	fn run_loop(&mut self) {
 		let mut rl = Editor::<()>::new();
 		loop {
-			match rl.readline("ivory ~ ") {
+			let zinger = self
+				.loader
+				.file_display_name()
+				.unwrap_or_else(|| "ivory".to_string());
+			match rl.readline(&format!("{} ~ ", zinger)) {
 				Ok(line) => {
 					rl.add_history_entry(&line);
 					if let Err(err) = self.run(&line) {
@@ -83,7 +95,7 @@ fn main() {
 	let debug = matches.is_present("DEBUG");
 
 	let mut runtime = Runtime::new(rand::thread_rng());
-	let mut loader = FileLoader {};
+	let mut loader = FileLoader { current_file: None };
 
 	if let Some(file) = file {
 		if debug {
