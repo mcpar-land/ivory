@@ -1,3 +1,4 @@
+use colored::*;
 use std::fmt::Display;
 
 use nom::{character::complete::one_of, combinator::opt};
@@ -53,6 +54,7 @@ impl Display for ExprOpMathKind {
 				Self::Mul => "*",
 				Self::Div => "/",
 			}
+			.red()
 		)
 	}
 }
@@ -89,6 +91,7 @@ impl Display for ExprOpMathRound {
 				Self::Down => "_",
 				Self::Round => "~",
 			}
+			.red()
 		)
 	}
 }

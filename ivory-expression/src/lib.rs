@@ -1,3 +1,4 @@
+use colored::*;
 use std::fmt::{Debug, Display, Formatter};
 
 pub mod iter;
@@ -334,7 +335,9 @@ impl<O: Display + Clone, T: Display + Clone> Display
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
 		match self {
 			ExpressionComponent::Token(token) => write!(f, "{}", token),
-			ExpressionComponent::Paren(paren) => write!(f, "( {} )", paren),
+			ExpressionComponent::Paren(paren) => {
+				write!(f, "{} {} {}", "(".color("gray"), paren, ")".color("gray"))
+			}
 		}
 	}
 }

@@ -1,6 +1,7 @@
 pub mod dice_ops;
 pub mod math;
 
+use colored::*;
 use std::fmt::Display;
 
 use ivory_expression::{Expression, ExpressionComponent, Pair};
@@ -76,7 +77,7 @@ impl Parse for Op {
 impl Display for Op {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Op::Dice => write!(f, "d"),
+			Op::Dice => write!(f, "{}", "d".red()),
 			Op::Math(op) => write!(f, "{}", op),
 			Op::DiceOp(op) => write!(f, "{}", op),
 		}

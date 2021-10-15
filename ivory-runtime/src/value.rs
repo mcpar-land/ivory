@@ -1,3 +1,4 @@
+use colored::*;
 use ivory_tokenizer::{
 	expression::{
 		math::{ExprOpMath, ExprOpMathKind, ExprOpMathRound},
@@ -511,19 +512,19 @@ impl Display for Value {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Value::Integer(v) => {
-				write!(f, "{}", v)
+				write!(f, "{}", v.to_string().cyan())
 			}
 			Value::Decimal(v) => {
-				write!(f, "{}", v)
+				write!(f, "{}", v.to_string().cyan())
 			}
 			Value::Boolean(v) => {
-				write!(f, "{}", v)
+				write!(f, "{}", v.to_string().cyan())
 			}
 			Value::String(v) => {
-				write!(f, "\"{}\"", v)
+				write!(f, "\"{}\"", v.to_string().cyan())
 			}
 			Value::Roll(v) => {
-				write!(f, "{}", v)
+				write!(f, "{}", v.to_string().cyan())
 			}
 			Value::Array(v) => {
 				write!(

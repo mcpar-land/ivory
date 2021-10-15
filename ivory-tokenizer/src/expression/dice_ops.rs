@@ -1,3 +1,4 @@
+use colored::*;
 use std::fmt::Display;
 
 use nom::{
@@ -84,6 +85,7 @@ impl Display for DiceOpCmp {
 				DiceOpCmp::Explode => "!",
 				DiceOpCmp::ExplodeContinuous => "!!",
 			}
+			.red()
 		)
 	}
 }
@@ -100,6 +102,7 @@ impl Display for DiceCmp {
 				DiceCmp::GtEq => ">=",
 				DiceCmp::LtEq => "<=",
 			}
+			.red()
 		)
 	}
 }
