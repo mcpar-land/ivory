@@ -11,6 +11,7 @@ pub mod expression;
 pub mod istruct;
 pub mod itype;
 pub mod module;
+pub mod ternary;
 pub mod util;
 pub mod values;
 pub mod variable;

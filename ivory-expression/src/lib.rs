@@ -1,7 +1,9 @@
 use colored::*;
 use std::fmt::{Debug, Display, Formatter};
+use ternary::Ternary;
 
-pub mod iter;
+// pub mod iter;
+pub mod ternary;
 
 pub struct Expression<O: Clone, T: Clone> {
 	pub first: ExpressionComponent<O, T>,

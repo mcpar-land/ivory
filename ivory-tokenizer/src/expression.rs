@@ -4,7 +4,9 @@ pub mod math;
 use colored::*;
 use std::fmt::Display;
 
-use ivory_expression::{Expression, ExpressionComponent, Pair};
+use ivory_expression::{
+	ternary::Ternary, Expression, ExpressionComponent, Pair,
+};
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -30,7 +32,7 @@ impl Parse for ivory_expression::ExpressionComponent<Op, ExpressionToken> {
 			map(
 				delimited(
 					pair(char('('), multispace0),
-					Expression::parse,
+					Ternary::parse,
 					pair(multispace0, char(')')),
 				),
 				|r| Self::Paren(Box::new(r)),
