@@ -5,15 +5,16 @@ use colored::*;
 use std::fmt::Display;
 
 use ivory_expression::{
-	ternary::Ternary, Expression, ExpressionComponent, Pair,
+	ternary::Ternary, Expression, ExpressionComponent, Pair, TernaryExpression,
+	TernaryExpressionComponent, TernaryPair,
 };
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
 	character::complete::{char, multispace0},
-	combinator::{map, value},
+	combinator::{map, opt, value},
 	multi::{many0, separated_list0},
-	sequence::{delimited, pair, preceded, separated_pair},
+	sequence::{delimited, pair, preceded, separated_pair, tuple},
 };
 
 use crate::{
@@ -25,7 +26,35 @@ use crate::{
 
 use self::{dice_ops::DiceOp, math::ExprOpMath};
 
-impl Parse for ivory_expression::ExpressionComponent<Op, ExpressionToken> {
+impl Parse for Ternary<Op, ExpressionToken> {
+	fn parse(input: &str) -> nom::IResult<&str, Self> {
+		let (input, first) = TernaryExpression::parse(input)?;
+
+		let (input, conditions) = opt(map(
+			preceded(
+				pair(multispace0, tag("?")),
+				separated_pair(
+					Self::parse,
+					tuple((multispace0, tag(":"), multispace0)),
+					Self::parse,
+				),
+			),
+			|both| Box::new(both),
+		))(input)?;
+
+		Ok((
+			input,
+			Self {
+				condition: first,
+				options: conditions,
+			},
+		))
+	}
+}
+
+impl Parse
+	for ivory_expression::TernaryExpressionComponent<Op, ExpressionToken>
+{
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		alt((
 			map(ExpressionToken::parse, |r| Self::Token(r)),
@@ -41,19 +70,20 @@ impl Parse for ivory_expression::ExpressionComponent<Op, ExpressionToken> {
 	}
 }
 
-impl Parse for Pair<Op, ExpressionToken> {
+impl Parse for TernaryPair<Op, ExpressionToken> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		map(
-			separated_pair(Op::parse, multispace0, ExpressionComponent::parse),
-			|(op, component)| Pair(op, component),
+			separated_pair(Op::parse, multispace0, TernaryExpressionComponent::parse),
+			|(op, component)| TernaryPair(op, component),
 		)(input)
 	}
 }
 
-impl Parse for Expression<Op, ExpressionToken> {
+impl Parse for TernaryExpression<Op, ExpressionToken> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		let (input, first) = ExpressionComponent::parse(input)?;
-		let (input, pairs) = many0(preceded(multispace0, Pair::parse))(input)?;
+		let (input, first) = TernaryExpressionComponent::parse(input)?;
+		let (input, pairs) =
+			many0(preceded(multispace0, TernaryPair::parse))(input)?;
 
 		Ok((input, Self { first, pairs }))
 	}
@@ -124,7 +154,7 @@ impl Display for ExpressionToken {
 fn parse_expression() {
 	use crate::util::test_multiple;
 
-	test_multiple::<Expression<Op, ExpressionToken>>(&[
+	test_multiple::<TernaryExpression<Op, ExpressionToken>>(&[
 		"11 + 3",
 		"11+3",
 		"5 * 4 + 13 - 2",

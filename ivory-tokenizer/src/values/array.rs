@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use ivory_expression::Expression;
+use ivory_expression::{Expression, TernaryExpression};
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -17,7 +17,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct ArrayValue(pub Vec<Expression<Op, ExpressionToken>>);
+pub struct ArrayValue(pub Vec<TernaryExpression<Op, ExpressionToken>>);
 
 impl Parse for ArrayValue {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
@@ -31,7 +31,7 @@ impl Parse for ArrayValue {
 					pair(char('['), multispace0),
 					separated_list0(
 						tuple((multispace0, tag(","), multispace0)),
-						Expression::parse,
+						TernaryExpression::parse,
 					),
 					pair(multispace0, char(']')),
 				),

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use ivory_expression::Expression;
+use ivory_expression::{Expression, TernaryExpression};
 use nom::{
 	branch::alt,
 	bytes::complete::{tag, take_while},
@@ -66,7 +66,7 @@ impl Display for StructDefinition {
 
 #[derive(Clone, Debug)]
 pub enum StructDefinitionValue {
-	Value(Expression<Op, ExpressionToken>),
+	Value(TernaryExpression<Op, ExpressionToken>),
 	Type(Type),
 }
 
@@ -74,7 +74,9 @@ impl Parse for StructDefinitionValue {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		alt((
 			map(Type::parse, |t| Self::Type(t)),
-			map(Expression::<Op, ExpressionToken>::parse, |v| Self::Value(v)),
+			map(TernaryExpression::<Op, ExpressionToken>::parse, |v| {
+				Self::Value(v)
+			}),
 		))(input)
 	}
 }

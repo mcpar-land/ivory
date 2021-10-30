@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use ivory_expression::Expression;
+use ivory_expression::{Expression, TernaryExpression};
 use nom::{
 	bytes::complete::tag,
 	character::complete::multispace0,
@@ -18,7 +18,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct StructInstance {
 	pub name: StructName,
-	pub values: HashMap<VariableName, Expression<Op, ExpressionToken>>,
+	pub values: HashMap<VariableName, TernaryExpression<Op, ExpressionToken>>,
 }
 
 impl Parse for StructInstance {
@@ -27,11 +27,11 @@ impl Parse for StructInstance {
 			input: &str,
 		) -> nom::IResult<
 			&str,
-			HashMap<VariableName, Expression<Op, ExpressionToken>>,
+			HashMap<VariableName, TernaryExpression<Op, ExpressionToken>>,
 		> {
 			let (input, pairs): (
 				&str,
-				Vec<(VariableName, Expression<Op, ExpressionToken>)>,
+				Vec<(VariableName, TernaryExpression<Op, ExpressionToken>)>,
 			) = delimited(
 				pair(tag("{"), multispace0),
 				separated_list0(
@@ -39,7 +39,7 @@ impl Parse for StructInstance {
 					separated_pair(
 						VariableName::parse,
 						tuple((multispace0, tag(":"), multispace0)),
-						Expression::parse,
+						TernaryExpression::parse,
 					),
 				),
 				pair(multispace0, tag("}")),
