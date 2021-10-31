@@ -10,35 +10,29 @@ pub struct Climber<
 	To: Token<Re, Err, Ctx> + Clone,
 	Re,
 	Err,
-	Oh: Fn(&Op, &Ctx) -> (usize, Assoc),
-	H: Fn(To, Op, To, &Ctx) -> Result<To, Err>,
 	Ctx = (),
 > {
-	pub rules: Oh,
+	pub rules: fn(&Op, &Ctx) -> (usize, Assoc),
 	/// Function to handle the result of an operator between two tokens.
 	///
 	/// Arguments are:
 	/// - Left-hand side token
 	/// - Operator
 	/// - Right-hand side token
-	pub handler: H,
+	pub handler: fn(To, Op, To, &Ctx) -> Result<To, Err>,
 	p_rule_value: PhantomData<Op>,
 	p_token: PhantomData<To>,
 	p_result: PhantomData<Re>,
 	p_ctx: PhantomData<Ctx>,
 }
 
-impl<
-		Op: Hash + Eq + Copy,
-		To: Token<Re, Err, Ctx> + Clone,
-		Re,
-		Err,
-		Oh: Fn(&Op, &Ctx) -> (usize, Assoc),
-		H: Fn(To, Op, To, &Ctx) -> Result<To, Err>,
-		Ctx,
-	> Climber<Op, To, Re, Err, Oh, H, Ctx>
+impl<Op: Hash + Eq + Copy, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx>
+	Climber<Op, To, Re, Err, Ctx>
 {
-	pub fn new(rules: Oh, handler: H) -> Self {
+	pub fn new(
+		rules: fn(&Op, &Ctx) -> (usize, Assoc),
+		handler: fn(To, Op, To, &Ctx) -> Result<To, Err>,
+	) -> Self {
 		Self {
 			rules,
 			handler,

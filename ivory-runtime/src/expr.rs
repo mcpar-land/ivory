@@ -53,38 +53,13 @@ fn prec_handler(
 	Ok(ExpressionComponent::Token(lhs.run_op(&rhs, &Op::Math(op))?))
 }
 
-fn every_rule(src: ExprOpMathKind) -> Rule<ExprOpMath> {
-	let mut r = Rule::new(
-		ExprOpMath {
-			kind: src,
-			round: None,
-		},
-		Assoc::Left,
-	);
-	for round in [
-		ExprOpMathRound::Down,
-		ExprOpMathRound::Up,
-		ExprOpMathRound::Round,
-	] {
-		r = r
-			| Rule::new(
-				ExprOpMath {
-					kind: src,
-					round: Some(round),
-				},
-				Assoc::Left,
-			);
-	}
-	r
-}
-
 lazy_static! {
 	pub static ref PREC_CLIMBER: Climber<ExprOpMath, Component, Value, RuntimeError> =
 		Climber::new(
 			|op, _| {
 				match op.kind {
-					ExprOpMathKind::Add | ExprOpMathKind::Sub => todo!(),
-					ExprOpMathKind::Mul | ExprOpMathKind::Div => todo!(),
+					ExprOpMathKind::Add | ExprOpMathKind::Sub => (0, Assoc::Left),
+					ExprOpMathKind::Mul | ExprOpMathKind::Div => (1, Assoc::Right),
 				}
 			},
 			prec_handler
