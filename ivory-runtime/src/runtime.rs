@@ -61,8 +61,8 @@ impl<R: Rng> Runtime<R> {
 	pub fn new(rng: R) -> Self {
 		let climber = Climber::new(
 			|op, _, _| match op {
-				RolledOp::Ternary(inner) => (0, Assoc::Right),
-				RolledOp::Math { kind, round } => match kind {
+				RolledOp::Ternary(_) => (0, Assoc::Right),
+				RolledOp::Math { kind, .. } => match kind {
 					ExprOpMathKind::Add | ExprOpMathKind::Sub => (1, Assoc::Left),
 					ExprOpMathKind::Mul | ExprOpMathKind::Div => (2, Assoc::Right),
 				},

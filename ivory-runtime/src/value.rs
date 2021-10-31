@@ -123,6 +123,14 @@ impl Value {
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		use Value::*;
+		if let RolledOp::Ternary(ternary) = &op {
+			if *self.to_boolean()? {
+				return runtime.math_to_value(ternary.as_ref().clone(), ctx);
+			} else {
+				return Ok(rhs.clone());
+			}
+		}
+
 		match (self, rhs) {
 			(Integer(a), Integer(b)) => a.op(b, op, runtime, ctx),
 			(Integer(a), Decimal(b)) => (*a as f32).op(b, op, runtime, ctx),
