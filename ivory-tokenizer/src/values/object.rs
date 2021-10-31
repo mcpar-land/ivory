@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
-use ivory_expression::{Expression, TernaryExpression};
+use ivory_expression::{Expression, Ternary};
 use nom::{
 	bytes::complete::tag,
 	character::complete::multispace0,
@@ -15,15 +15,13 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-pub struct ObjectValue(
-	pub HashMap<VariableName, TernaryExpression<Op, ExpressionToken>>,
-);
+pub struct ObjectValue(pub HashMap<VariableName, Ternary<Op, ExpressionToken>>);
 
 impl Parse for ObjectValue {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		let (input, pairs): (
 			&str,
-			Vec<(VariableName, TernaryExpression<Op, ExpressionToken>)>,
+			Vec<(VariableName, Ternary<Op, ExpressionToken>)>,
 		) = delimited(
 			pair(tag("{"), multispace0),
 			separated_list0(
@@ -31,7 +29,7 @@ impl Parse for ObjectValue {
 				separated_pair(
 					VariableName::parse,
 					tuple((multispace0, tag(":"), multispace0)),
-					TernaryExpression::parse,
+					Ternary::parse,
 				),
 			),
 			pair(multispace0, tag("}")),

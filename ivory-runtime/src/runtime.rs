@@ -1,7 +1,9 @@
 use crate::{
 	mod_loader::ModLoader, roll::Roll, value::Value, Result, RuntimeError,
 };
-use ivory_expression::{Expression, ExpressionComponent};
+use ivory_expression::{
+	Expression, ExpressionComponent, Ternary, TernaryExpression,
+};
 use ivory_tokenizer::{
 	accessor::{Accessor, AccessorComponent},
 	expression::{math::ExprOpMath, ExpressionToken, Op},
@@ -63,8 +65,16 @@ impl<R: Rng> Runtime<R> {
 	}
 
 	pub fn run(&self, cmd: &str) -> Result<Expression<ExprOpMath, Value>> {
-		let ex = tokenize::<Expression<Op, ExpressionToken>>(cmd)?;
-		Ok(self.execute(&RuntimeContext::new(), &ex)?)
+		let ex = tokenize::<Ternary<Op, ExpressionToken>>(cmd)?;
+		Ok(self.pick_ternary(&RuntimeContext::new(), &ex)?)
+	}
+
+	pub fn pick_ternary(
+		&self,
+		ctx: &RuntimeContext,
+		ternary: &Ternary<Op, ExpressionToken>,
+	) -> Result<Expression<ExprOpMath, Value>> {
+		todo!();
 	}
 
 	pub fn access(
@@ -72,7 +82,7 @@ impl<R: Rng> Runtime<R> {
 		ctx: &RuntimeContext,
 		Accessor(var, components): &Accessor,
 	) -> Result<Expression<Op, Value>> {
-		let mut expr = match ctx.params.get(&var.0) {
+		let expr = match ctx.params.get(&var.0) {
 			Some(param) => param.clone(),
 			None => {
 				let val = self
@@ -80,11 +90,12 @@ impl<R: Rng> Runtime<R> {
 					.variables
 					.get(&var.0)
 					.ok_or_else(|| RuntimeError::VariableNotFound(var.0.clone()))?;
-				self.valueify(ctx, &val.value)?
+				val.value
 			}
 		};
+		let mut expr = self.pick_ternary(ctx, &expr)?;
 		for component in components {
-			let previous_value = self.val_expr_collapse(ctx, &expr)?;
+			let previous_value = expr.try_into()?;
 			match component {
 				AccessorComponent::Property(prop) => {
 					if let Value::Object(obj) = &previous_value {
@@ -112,11 +123,9 @@ impl<R: Rng> Runtime<R> {
 					{
 						let mut new_ctx = RuntimeContext::new();
 						for (var, expr) in args.iter().zip(call.iter()) {
-							new_ctx
-								.params
-								.insert(var.0.clone(), self.valueify(ctx, expr)?);
+							new_ctx.params.insert(var.0.clone(), expr.clone());
 						}
-						expr = self.valueify(&new_ctx, fn_expr)?;
+						expr = self.pick_ternary(&new_ctx, fn_expr)?;
 					} else {
 						return Err(RuntimeError::CannotCallKind(previous_value.kind()));
 					}
@@ -241,7 +250,7 @@ pub struct RuntimeValues {
 
 /// For handling context inside of functions
 pub struct RuntimeContext {
-	pub params: BTreeMap<String, Expression<Op, Value>>,
+	pub params: BTreeMap<String, Ternary<Op, ExpressionToken>>,
 }
 
 impl RuntimeContext {

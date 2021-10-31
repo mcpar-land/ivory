@@ -34,7 +34,10 @@ impl StructValue {
 						name.0.clone(),
 					));
 				}
-				values.insert(name.0.clone(), runtime.evaluate(ctx, expr)?);
+				values.insert(
+					name.0.clone(),
+					runtime.math_to_value(runtime.pick_ternary(ctx, expr)?)?,
+				);
 			}
 			Ok(Self {
 				kind: instance.name.clone(),

@@ -6,8 +6,15 @@ pub mod iter;
 pub mod ternary;
 
 pub struct Expression<O: Clone, T: Clone> {
+	pub ternary_condition: Option<EvaluatedTernary<O, T>>,
 	pub first: ExpressionComponent<O, T>,
 	pub pairs: Vec<Pair<O, T>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct EvaluatedTernary<O: Clone, T: Clone> {
+	pub condition: Box<Expression<O, T>>,
+	pub result: bool,
 }
 
 pub struct Pair<O: Clone, T: Clone>(pub O, pub ExpressionComponent<O, T>);
@@ -85,6 +92,7 @@ impl<'a, O: Clone, T: Clone, E: Clone> ExpressionComponent<O, Result<T, E>> {
 impl<O: Clone, T: Clone> Expression<O, T> {
 	pub fn new(first: T) -> Self {
 		Self {
+			ternary_condition: None,
 			first: ExpressionComponent::Token(first),
 			pairs: Vec::new(),
 		}
@@ -147,6 +155,12 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		Nt: Clone,
 	{
 		let mut new_expr = Expression {
+			ternary_condition: self.ternary_condition.clone().map(|c| {
+				EvaluatedTernary {
+					condition: Box::new(c.condition.map_tokens(f)),
+					result: c.result,
+				}
+			}),
 			first: self.first.map_tokens(f),
 			pairs: Vec::new(),
 		};
@@ -164,6 +178,12 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		No: Clone,
 	{
 		let mut new_expr = Expression {
+			ternary_condition: self.ternary_condition.clone().map(|c| {
+				EvaluatedTernary {
+					condition: Box::new(c.condition.map_operators(f)),
+					result: c.result,
+				}
+			}),
 			first: self.first.map_operators(f),
 			pairs: Vec::new(),
 		};
@@ -182,6 +202,15 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		Nt: Clone,
 	{
 		let mut new_expr = Expression {
+			ternary_condition: match &self.ternary_condition {
+				Some(ternary_condition) => Some(EvaluatedTernary {
+					condition: Box::new(
+						ternary_condition.condition.try_map_tokens_components(f)?,
+					),
+					result: ternary_condition.result,
+				}),
+				None => None,
+			},
 			first: self.first.try_map_tokens_components(f)?,
 			pairs: Vec::new(),
 		};
@@ -250,6 +279,7 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 		}
 
 		Ok(Expression {
+			ternary_condition: self.ternary_condition.clone(),
 			first,
 			pairs: pairs.into_iter().filter_map(|v| v).collect(),
 		})
@@ -273,6 +303,7 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 				inner.un_nest()
 			} else {
 				Self {
+					ternary_condition: self.ternary_condition,
 					first: ExpressionComponent::Paren(inner),
 					pairs: self.pairs,
 				}
@@ -286,6 +317,13 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 impl<O: Clone, T: Clone, E: Clone> Expression<O, Result<T, E>> {
 	pub fn ok(self) -> Result<Expression<O, T>, E> {
 		let mut e = Expression {
+			ternary_condition: match self.ternary_condition {
+				Some(c) => Some(EvaluatedTernary {
+					condition: Box::new(c.condition.ok()?),
+					result: c.result,
+				}),
+				None => None,
+			},
 			first: self.first.ok()?,
 			pairs: Vec::new(),
 		};
@@ -299,6 +337,7 @@ impl<O: Clone, T: Clone, E: Clone> Expression<O, Result<T, E>> {
 impl<O: Clone, T: Default + Clone> Default for Expression<O, T> {
 	fn default() -> Self {
 		Self {
+			ternary_condition: None,
 			first: ExpressionComponent::Token(T::default()),
 			pairs: Vec::new(),
 		}
@@ -308,6 +347,7 @@ impl<O: Clone, T: Default + Clone> Default for Expression<O, T> {
 impl<O: Clone, T: Clone> Clone for Expression<O, T> {
 	fn clone(&self) -> Self {
 		Self {
+			ternary_condition: self.ternary_condition.clone(),
 			first: self.first.clone(),
 			pairs: self.pairs.clone(),
 		}
@@ -409,6 +449,7 @@ mod test {
 
 	fn sample_expression() -> Expression<Op, i32> {
 		Expression {
+			ternary_condition: None,
 			first: ExpressionComponent::Token(0),
 			pairs: vec![
 				Pair(Op::C, ExpressionComponent::Token(1)),
@@ -418,6 +459,7 @@ mod test {
 				Pair(
 					Op::A,
 					ExpressionComponent::Paren(Box::new(Expression {
+						ternary_condition: None,
 						first: ExpressionComponent::Token(60),
 						pairs: vec![
 							Pair(Op::B, ExpressionComponent::Token(9)),

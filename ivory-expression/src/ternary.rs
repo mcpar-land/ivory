@@ -1,9 +1,9 @@
 use std::fmt::Display;
 
-use crate::{Expression, ExpressionComponent, Pair};
+use crate::{EvaluatedTernary, Expression, ExpressionComponent, Pair};
 
 type EvalFn<Ctx, O, T, E> =
-	fn(&Ctx, expr: TernaryExpression<O, T>) -> Result<bool, E>;
+	fn(&Ctx, expr: &Expression<O, T>) -> Result<bool, E>;
 
 #[derive(Clone, Debug)]
 pub struct Ternary<O: Clone, T: Clone> {
@@ -33,13 +33,26 @@ impl<O: Clone, T: Clone> Ternary<O, T> {
 	pub fn evaluate<Ctx, E>(
 		self,
 		ctx: &Ctx,
-		f: fn(&Ctx, expr: TernaryExpression<O, T>) -> Result<bool, E>,
+		f: EvalFn<Ctx, O, T, E>,
 	) -> Result<Expression<O, T>, E> {
 		if let Some(options) = self.options {
-			if f(ctx, self.condition)? {
-				options.0.evaluate(ctx, f)
+			let e = self.condition.evaluate(ctx, f)?;
+			if f(ctx, &e)? {
+				Ok(Expression {
+					ternary_condition: Some(EvaluatedTernary {
+						condition: Box::new(e),
+						result: true,
+					}),
+					..options.0.evaluate(ctx, f)?
+				})
 			} else {
-				options.1.evaluate(ctx, f)
+				Ok(Expression {
+					ternary_condition: Some(EvaluatedTernary {
+						condition: Box::new(e),
+						result: false,
+					}),
+					..options.1.evaluate(ctx, f)?
+				})
 			}
 		} else {
 			self.condition.evaluate(ctx, f)
@@ -54,6 +67,7 @@ impl<O: Clone, T: Clone> TernaryExpression<O, T> {
 		f: EvalFn<Ctx, O, T, E>,
 	) -> Result<Expression<O, T>, E> {
 		Ok(Expression {
+			ternary_condition: None,
 			first: self.first.evaluate(ctx, f)?,
 			pairs: {
 				let mut pairs = Vec::new();

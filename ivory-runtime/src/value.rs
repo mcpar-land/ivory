@@ -355,16 +355,16 @@ impl Value {
 			ivory_tokenizer::values::Value::Array(ArrayValue(v)) => Value::Array(
 				v.iter()
 					.map(|v| {
-						let v = runtime.valueify(ctx, v)?;
-						Ok(runtime.roll(ctx, &v)?.try_into()?)
+						let v = runtime.pick_ternary(ctx, v)?;
+						runtime.math_to_value(v)
 					})
 					.collect::<Result<Vec<Value>>>()?,
 			),
 			ivory_tokenizer::values::Value::Object(ObjectValue(v)) => Value::Object(
 				v.iter()
 					.map(|(n, v)| {
-						let v = runtime.valueify(ctx, v)?;
-						Ok((n.0.clone(), runtime.roll(ctx, &v)?.try_into()?))
+						let v = runtime.pick_ternary(ctx, &v)?;
+						Ok((n.0.clone(), runtime.math_to_value(v)?))
 					})
 					.collect::<Result<HashMap<String, Value>>>()?,
 			),

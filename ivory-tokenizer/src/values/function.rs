@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use ivory_expression::{Expression, TernaryExpression};
+use ivory_expression::Ternary;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
@@ -19,7 +19,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct FunctionValue {
 	pub args: Vec<VariableName>,
-	pub expr: Box<TernaryExpression<Op, ExpressionToken>>,
+	pub expr: Box<Ternary<Op, ExpressionToken>>,
 }
 
 impl Parse for FunctionValue {
@@ -28,7 +28,7 @@ impl Parse for FunctionValue {
 			separated_pair(
 				separated_list1(multispace1, VariableName::parse),
 				tuple((multispace0, tag("->"), multispace0)),
-				TernaryExpression::parse,
+				Ternary::parse,
 			),
 			|(args, expr)| Self {
 				args,
