@@ -2,30 +2,37 @@ use std::fmt;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-pub trait Token<Re, Err, Ctx = ()> {
-	fn convert(self, ctx: &Ctx) -> Result<Re, Err>;
+use rand::Rng;
+
+use crate::runtime::{Runtime, RuntimeContext};
+
+pub trait Token<Re, Err> {
+	fn convert<R: Rng>(
+		self,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
+	) -> Result<Re, Err>;
 }
-pub struct Climber<Op, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx = ()> {
-	pub rules: fn(&Op, &Ctx) -> (usize, Assoc),
+pub struct Climber<R: Rng, Op, To: Token<Re, Err> + Clone, Re, Err> {
+	pub rules: fn(&Op, &Runtime<R>, &RuntimeContext) -> (usize, Assoc),
 	/// Function to handle the result of an operator between two tokens.
 	///
 	/// Arguments are:
 	/// - Left-hand side token
 	/// - Operator
 	/// - Right-hand side token
-	pub handler: fn(To, Op, To, &Ctx) -> Result<To, Err>,
+	pub handler: fn(To, Op, To, &Runtime<R>, &RuntimeContext) -> Result<To, Err>,
 	p_rule_value: PhantomData<Op>,
 	p_token: PhantomData<To>,
 	p_result: PhantomData<Re>,
-	p_ctx: PhantomData<Ctx>,
 }
 
-impl<Op: Clone, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx>
-	Climber<Op, To, Re, Err, Ctx>
+impl<R: Rng, Op: Clone, To: Token<Re, Err> + Clone, Re, Err>
+	Climber<R, Op, To, Re, Err>
 {
 	pub fn new(
-		rules: fn(&Op, &Ctx) -> (usize, Assoc),
-		handler: fn(To, Op, To, &Ctx) -> Result<To, Err>,
+		rules: fn(&Op, &Runtime<R>, &RuntimeContext) -> (usize, Assoc),
+		handler: fn(To, Op, To, &Runtime<R>, &RuntimeContext) -> Result<To, Err>,
 	) -> Self {
 		Self {
 			rules,
@@ -33,15 +40,15 @@ impl<Op: Clone, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx>
 			p_rule_value: PhantomData,
 			p_token: PhantomData,
 			p_result: PhantomData,
-			p_ctx: PhantomData,
 		}
 	}
 	pub fn process(
 		&self,
 		expr: &Expression<Op, To>,
-		ctx: &Ctx,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
 	) -> Result<Re, Err> {
-		let mut primary = expr.first_token.clone().convert(ctx)?;
+		let mut primary = expr.first_token.clone().convert(runtime, ctx)?;
 		let lhs = expr.first_token.clone();
 		let mut tokens = expr.pairs.iter().peekable();
 		self
@@ -50,9 +57,10 @@ impl<Op: Clone, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx>
 				0,
 				&mut primary,
 				&mut tokens,
+				runtime,
 				ctx,
 			)?
-			.convert(ctx)
+			.convert(runtime, ctx)
 	}
 
 	fn process_rec(
@@ -61,24 +69,26 @@ impl<Op: Clone, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx>
 		min_prec: usize,
 		primary: &mut Re,
 		tokens: &mut std::iter::Peekable<std::slice::Iter<(Op, To)>>,
-		ctx: &Ctx,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
 	) -> Result<To, Err> {
 		while let Some((rule, _)) = tokens.peek() {
-			let (prec, _) = (self.rules)(rule, ctx);
+			let (prec, _) = (self.rules)(rule, runtime, ctx);
 			if prec >= min_prec {
 				let (_, rhs_ref) = tokens.next().unwrap();
 				let mut rhs = rhs_ref.clone();
 
 				while let Some((peek_rule, _)) = tokens.peek() {
-					let (peek_prec, peek_assoc) = (self.rules)(peek_rule, ctx);
+					let (peek_prec, peek_assoc) = (self.rules)(peek_rule, runtime, ctx);
 					if peek_prec > prec || peek_assoc == Assoc::Right && peek_prec == prec
 					{
-						rhs = self.process_rec(rhs, peek_prec, primary, tokens, ctx)?;
+						rhs = self
+							.process_rec(rhs, peek_prec, primary, tokens, runtime, ctx)?;
 					} else {
 						break;
 					}
 				}
-				lhs = (self.handler)(lhs, rule.clone(), rhs, ctx)?;
+				lhs = (self.handler)(lhs, rule.clone(), rhs, runtime, ctx)?;
 			} else {
 				break;
 			}

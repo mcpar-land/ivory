@@ -1,11 +1,19 @@
 use crate::{
-	expr::RolledOp, mod_loader::ModLoader, roll::Roll, value::Value, Result,
-	RuntimeError,
+	expr::{into_prec, RolledOp},
+	mod_loader::ModLoader,
+	prec::{self, Token},
+	prec::{Assoc, Climber},
+	roll::Roll,
+	value::Value,
+	Result, RuntimeError,
 };
 use ivory_expression::{Expression, ExpressionComponent};
 use ivory_tokenizer::{
 	accessor::{Accessor, AccessorComponent},
-	expression::{math::ExprOpMath, ExpressionToken, Op},
+	expression::{
+		math::{ExprOpMath, ExprOpMathKind},
+		ExpressionToken, Op,
+	},
 	istruct::StructDefinition,
 	tokenize,
 	values::function::FunctionValue,
@@ -19,19 +27,55 @@ use std::{
 	convert::TryInto,
 };
 
+type Component = ExpressionComponent<RolledOp, Value>;
+
+pub type RolledExpression = prec::Expression<RolledOp, Component>;
+
 pub struct Runtime<R: Rng> {
 	pub values: RuntimeValues,
 	pub rng: RefCell<R>,
+	pub climber: Climber<
+		R,
+		RolledOp,
+		ExpressionComponent<RolledOp, Value>,
+		Value,
+		RuntimeError,
+	>,
 }
 
 impl<R: Rng> Runtime<R> {
+	fn prec_handler(
+		lhs: Component,
+		op: RolledOp,
+		rhs: Component,
+		runtime: &Self,
+		ctx: &RuntimeContext,
+	) -> Result<Component> {
+		let lhs = lhs.convert(runtime, ctx)?;
+		let rhs = rhs.convert(runtime, ctx)?;
+		Ok(ExpressionComponent::Token(
+			lhs.run_op(&rhs, &op, runtime, ctx)?,
+		))
+	}
+
 	pub fn new(rng: R) -> Self {
+		let climber = Climber::new(
+			|op, _, _| match op {
+				RolledOp::Ternary(inner) => (0, Assoc::Right),
+				RolledOp::Math { kind, round } => match kind {
+					ExprOpMathKind::Add | ExprOpMathKind::Sub => (1, Assoc::Left),
+					ExprOpMathKind::Mul | ExprOpMathKind::Div => (2, Assoc::Right),
+				},
+			},
+			Self::prec_handler,
+		);
 		Self {
 			values: RuntimeValues {
 				structs: BTreeMap::new(),
 				variables: BTreeMap::new(),
 			},
 			rng: RefCell::new(rng),
+			climber,
 		}
 	}
 	pub fn rng(&self) -> RefMut<R> {
@@ -132,7 +176,7 @@ impl<R: Rng> Runtime<R> {
 		ctx: &RuntimeContext,
 		expr: &Expression<Op, ExpressionToken>,
 	) -> Result<Value> {
-		self.execute(ctx, expr)?.try_into()
+		self.math_to_value(self.execute(ctx, expr)?, ctx)
 	}
 
 	pub fn execute(
@@ -234,14 +278,15 @@ impl<R: Rng> Runtime<R> {
 		ctx: &RuntimeContext,
 		expr: &Expression<Op, Value>,
 	) -> Result<Value> {
-		self.roll(ctx, expr)?.try_into()
+		self.math_to_value(self.roll(ctx, expr)?, ctx)
 	}
 
 	pub fn math_to_value(
 		&self,
 		expr: Expression<RolledOp, Value>,
+		ctx: &RuntimeContext,
 	) -> Result<Value> {
-		Ok(expr.try_into()?)
+		Ok(self.climber.process(&into_prec(expr), &self, ctx)?)
 	}
 }
 

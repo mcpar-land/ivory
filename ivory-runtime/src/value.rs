@@ -115,35 +115,49 @@ impl Value {
 		}
 	}
 
-	pub fn run_op(&self, rhs: &Value, op: &RolledOp) -> Result<Value> {
+	pub fn run_op<R: Rng>(
+		&self,
+		rhs: &Value,
+		op: &RolledOp,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
+	) -> Result<Value> {
 		use Value::*;
 		match (self, rhs) {
-			(Integer(a), Integer(b)) => a.op(b, op),
-			(Integer(a), Decimal(b)) => (*a as f32).op(b, op),
-			(Integer(a), Boolean(b)) => a.op(&(*b as i32), op),
-			(Integer(a), String(b)) => a.to_string().op(b, op),
-			(Integer(a), Roll(b)) => a.op(&(b.value() as i32), op),
-			(Decimal(a), Integer(b)) => a.op(&(*b as f32), op),
-			(Decimal(a), Decimal(b)) => a.op(b, op),
-			(Decimal(a), Boolean(b)) => a.op(&(*b as i32 as f32), op),
-			(Decimal(a), String(b)) => a.to_string().op(b, op),
-			(Decimal(a), Roll(b)) => a.op(&(b.value() as f32), op),
-			(Boolean(a), Integer(b)) => (*a as i32).op(b, op),
-			(Boolean(a), Decimal(b)) => (*a as i32 as f32).op(b, op),
-			(Boolean(a), Boolean(b)) => (*a as i32).op(&(*b as i32), op),
-			(Boolean(a), String(b)) => a.to_string().op(b, op),
-			(Boolean(a), Roll(b)) => (*a as i32).op(&(b.value() as i32), op),
-			(String(a), Integer(b)) => a.op(&b.to_string(), op),
-			(String(a), Decimal(b)) => a.op(&b.to_string(), op),
-			(String(a), Boolean(b)) => a.op(&b.to_string(), op),
-			(String(a), String(b)) => a.op(b, op),
-			(String(a), Roll(b)) => a.op(&format!("{}", b), op),
-			(Roll(a), Integer(b)) => (a.value() as i32).op(b, op),
-			(Roll(a), Decimal(b)) => (a.value() as f32).op(b, op),
-			(Roll(a), Boolean(b)) => (a.value() as i32).op(&(*b as i32), op),
-			(Roll(a), String(b)) => format!("{}", a).op(b, op),
-			(Roll(a), Roll(b)) => (a.value() as i32).op(&(b.value() as i32), op),
-			(Array(a), Array(b)) => a.op(b, op),
+			(Integer(a), Integer(b)) => a.op(b, op, runtime, ctx),
+			(Integer(a), Decimal(b)) => (*a as f32).op(b, op, runtime, ctx),
+			(Integer(a), Boolean(b)) => a.op(&(*b as i32), op, runtime, ctx),
+			(Integer(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
+			(Integer(a), Roll(b)) => a.op(&(b.value() as i32), op, runtime, ctx),
+			(Decimal(a), Integer(b)) => a.op(&(*b as f32), op, runtime, ctx),
+			(Decimal(a), Decimal(b)) => a.op(b, op, runtime, ctx),
+			(Decimal(a), Boolean(b)) => a.op(&(*b as i32 as f32), op, runtime, ctx),
+			(Decimal(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
+			(Decimal(a), Roll(b)) => a.op(&(b.value() as f32), op, runtime, ctx),
+			(Boolean(a), Integer(b)) => (*a as i32).op(b, op, runtime, ctx),
+			(Boolean(a), Decimal(b)) => (*a as i32 as f32).op(b, op, runtime, ctx),
+			(Boolean(a), Boolean(b)) => {
+				(*a as i32).op(&(*b as i32), op, runtime, ctx)
+			}
+			(Boolean(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
+			(Boolean(a), Roll(b)) => {
+				(*a as i32).op(&(b.value() as i32), op, runtime, ctx)
+			}
+			(String(a), Integer(b)) => a.op(&b.to_string(), op, runtime, ctx),
+			(String(a), Decimal(b)) => a.op(&b.to_string(), op, runtime, ctx),
+			(String(a), Boolean(b)) => a.op(&b.to_string(), op, runtime, ctx),
+			(String(a), String(b)) => a.op(b, op, runtime, ctx),
+			(String(a), Roll(b)) => a.op(&format!("{}", b), op, runtime, ctx),
+			(Roll(a), Integer(b)) => (a.value() as i32).op(b, op, runtime, ctx),
+			(Roll(a), Decimal(b)) => (a.value() as f32).op(b, op, runtime, ctx),
+			(Roll(a), Boolean(b)) => {
+				(a.value() as i32).op(&(*b as i32), op, runtime, ctx)
+			}
+			(Roll(a), String(b)) => format!("{}", a).op(b, op, runtime, ctx),
+			(Roll(a), Roll(b)) => {
+				(a.value() as i32).op(&(b.value() as i32), op, runtime, ctx)
+			}
+			(Array(a), Array(b)) => a.op(b, op, runtime, ctx),
 			(a, b) => Err(RuntimeError::CannotRunOp(a.kind(), op.clone(), b.kind())),
 		}
 	}
@@ -357,7 +371,7 @@ impl Value {
 				v.iter()
 					.map(|v| {
 						let v = runtime.valueify(ctx, v)?;
-						Ok(runtime.roll(ctx, &v)?.try_into()?)
+						runtime.val_expr_collapse(ctx, &v)
 					})
 					.collect::<Result<Vec<Value>>>()?,
 			),
@@ -365,7 +379,7 @@ impl Value {
 				v.iter()
 					.map(|(n, v)| {
 						let v = runtime.valueify(ctx, v)?;
-						Ok((n.0.clone(), runtime.roll(ctx, &v)?.try_into()?))
+						Ok((n.0.clone(), runtime.val_expr_collapse(ctx, &v)?))
 					})
 					.collect::<Result<HashMap<String, Value>>>()?,
 			),
@@ -402,11 +416,38 @@ fn same_op_err(kind: ValueKind, op: &RolledOp) -> Result<Value> {
 }
 
 trait RunOp {
-	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value>;
+	fn op<R: Rng>(
+		&self,
+		other: &Self,
+		op: &RolledOp,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
+	) -> Result<Value>;
+}
+
+impl RunOp for bool {
+	fn op<R: Rng>(
+		&self,
+		other: &Self,
+		op: &RolledOp,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
+	) -> Result<Value> {
+		match op {
+			RolledOp::Ternary(true_value) => todo!(),
+			_ => return same_op_err(ValueKind::Boolean, op),
+		}
+	}
 }
 
 impl RunOp for i32 {
-	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value> {
+	fn op<R: Rng>(
+		&self,
+		other: &Self,
+		op: &RolledOp,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
+	) -> Result<Value> {
 		Ok(Value::Integer(match op {
 			RolledOp::Math { kind, round } => match kind {
 				ExprOpMathKind::Add => self + other,
@@ -429,7 +470,13 @@ impl RunOp for i32 {
 }
 
 impl RunOp for f32 {
-	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value> {
+	fn op<R: Rng>(
+		&self,
+		other: &Self,
+		op: &RolledOp,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
+	) -> Result<Value> {
 		match op {
 			RolledOp::Math { kind, round } => {
 				let res = match kind {
@@ -453,7 +500,13 @@ impl RunOp for f32 {
 }
 
 impl RunOp for String {
-	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value> {
+	fn op<R: Rng>(
+		&self,
+		other: &Self,
+		op: &RolledOp,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
+	) -> Result<Value> {
 		match op {
 			RolledOp::Math {
 				kind: ExprOpMathKind::Add,
@@ -465,7 +518,13 @@ impl RunOp for String {
 }
 
 impl RunOp for Vec<Value> {
-	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value> {
+	fn op<R: Rng>(
+		&self,
+		other: &Self,
+		op: &RolledOp,
+		runtime: &Runtime<R>,
+		ctx: &RuntimeContext,
+	) -> Result<Value> {
 		match op {
 			RolledOp::Math {
 				kind: ExprOpMathKind::Add,
@@ -582,6 +641,10 @@ impl<'a> ValueRef<'a> {
 #[cfg(test)]
 #[test]
 fn auto_converting_ops() {
+	use rand::thread_rng;
+
+	let runtime = Runtime::new(thread_rng());
+	let ctx = RuntimeContext::new();
 	assert_eq!(
 		Value::Integer(10)
 			.run_op(
@@ -589,7 +652,9 @@ fn auto_converting_ops() {
 				&RolledOp::Math {
 					kind: ExprOpMathKind::Add,
 					round: None
-				}
+				},
+				&runtime,
+				&ctx
 			)
 			.unwrap(),
 		Value::Decimal(16.9)
@@ -601,7 +666,9 @@ fn auto_converting_ops() {
 				&RolledOp::Math {
 					kind: ExprOpMathKind::Add,
 					round: None
-				}
+				},
+				&runtime,
+				&ctx
 			)
 			.unwrap(),
 		Value::String("foo 69".to_string())
@@ -613,7 +680,9 @@ fn auto_converting_ops() {
 				&RolledOp::Math {
 					kind: ExprOpMathKind::Add,
 					round: None
-				}
+				},
+				&runtime,
+				&ctx
 			)
 			.unwrap(),
 		Value::Array(vec![
