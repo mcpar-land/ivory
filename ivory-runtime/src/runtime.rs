@@ -81,7 +81,7 @@ impl<R: Rng> Runtime<R> {
 		&self,
 		ctx: &RuntimeContext,
 		Accessor(var, components): &Accessor,
-	) -> Result<Expression<Op, Value>> {
+	) -> Result<Expression<ExprOpMath, Value>> {
 		let expr = match ctx.params.get(&var.0) {
 			Some(param) => param.clone(),
 			None => {
@@ -112,8 +112,9 @@ impl<R: Rng> Runtime<R> {
 					}
 				}
 				AccessorComponent::Index(i) => {
-					expr =
-						Expression::new(previous_value.index(&self.evaluate(ctx, i)?)?);
+					expr = Expression::new(
+						previous_value.index(&self.pick_ternary(ctx, i)?.try_into()?)?,
+					);
 				}
 				AccessorComponent::Call(call) => {
 					if let Value::Function(FunctionValue {
@@ -143,33 +144,33 @@ impl<R: Rng> Runtime<R> {
 		self.execute(ctx, expr)?.try_into()
 	}
 
-	pub fn execute(
-		&self,
-		ctx: &RuntimeContext,
-		expr: &Expression<Op, ExpressionToken>,
-	) -> Result<Expression<ExprOpMath, Value>> {
-		self.roll(ctx, &self.valueify(ctx, expr)?)
-	}
+	// pub fn execute(
+	// 	&self,
+	// 	ctx: &RuntimeContext,
+	// 	expr: &Expression<Op, ExpressionToken>,
+	// ) -> Result<Expression<ExprOpMath, Value>> {
+	// 	self.roll(ctx, &self.valueify(ctx, expr)?)
+	// }
 
-	pub fn valueify(
-		&self,
-		ctx: &RuntimeContext,
-		expr: &Expression<Op, ExpressionToken>,
-	) -> Result<Expression<Op, Value>> {
-		expr.try_map_tokens_components(|token| match token {
-			ExpressionToken::Value(val) => Ok(ExpressionComponent::Token(
-				Value::from_token(val, &self, ctx)?,
-			)),
-			ExpressionToken::Accessor(accessor) => Ok(ExpressionComponent::Paren(
-				Box::new(self.access(ctx, accessor)?),
-			)),
-		})
-	}
+	// pub fn valueify(
+	// 	&self,
+	// 	ctx: &RuntimeContext,
+	// 	expr: &Expression<Op, ExpressionToken>,
+	// ) -> Result<Expression<Op, Value>> {
+	// 	expr.try_map_tokens_components(|token| match token {
+	// 		ExpressionToken::Value(val) => Ok(ExpressionComponent::Token(
+	// 			Value::from_token(val, &self, ctx)?,
+	// 		)),
+	// 		ExpressionToken::Accessor(accessor) => Ok(ExpressionComponent::Paren(
+	// 			Box::new(self.access(ctx, accessor)?),
+	// 		)),
+	// 	})
+	// }
 
 	pub fn roll(
 		&self,
 		ctx: &RuntimeContext,
-		expr: &Expression<Op, Value>,
+		expr: &Expression<Op, ExpressionToken>,
 	) -> Result<Expression<ExprOpMath, Value>> {
 		let rolled = expr.collapse::<_, RuntimeError>(|lhs, op, rhs| match op {
 			Op::Dice => {
