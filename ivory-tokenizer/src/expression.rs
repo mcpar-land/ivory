@@ -21,12 +21,15 @@ use crate::{
 	Parse,
 };
 
-use self::{dice_ops::DiceOp, math::ExprOpMath};
+use self::{
+	dice_ops::DiceOp,
+	math::{ExprOpMath, ExprOpMathRound},
+};
 
-impl Parse for ivory_expression::ExpressionComponent<Op, ExpressionToken> {
+impl<O: Parse, T: Parse> Parse for ivory_expression::ExpressionComponent<O, T> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		alt((
-			map(ExpressionToken::parse, |r| Self::Token(r)),
+			map(T::parse, |r| Self::Token(r)),
 			map(
 				delimited(
 					pair(char('('), multispace0),
@@ -39,16 +42,16 @@ impl Parse for ivory_expression::ExpressionComponent<Op, ExpressionToken> {
 	}
 }
 
-impl Parse for Pair<Op, ExpressionToken> {
+impl<O: Parse, T: Parse> Parse for Pair<O, T> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		map(
-			separated_pair(Op::parse, multispace0, ExpressionComponent::parse),
+			separated_pair(O::parse, multispace0, ExpressionComponent::<O, T>::parse),
 			|(op, component)| Pair(op, component),
 		)(input)
 	}
 }
 
-impl Parse for Expression<Op, ExpressionToken> {
+impl<O: Parse, T: Parse> Parse for Expression<O, T> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		let (input, first) = ExpressionComponent::parse(input)?;
 		let (input, pairs) = many0(preceded(multispace0, Pair::parse))(input)?;
@@ -57,7 +60,7 @@ impl Parse for Expression<Op, ExpressionToken> {
 	}
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Copy)]
+#[derive(Clone, Debug)]
 pub enum Op {
 	Dice,
 	Math(ExprOpMath),

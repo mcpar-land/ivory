@@ -80,6 +80,17 @@ impl<'a, O: Clone, T: Clone, E: Clone> ExpressionComponent<O, Result<T, E>> {
 	}
 }
 
+impl<O: Clone, T: Clone, E: Clone> ExpressionComponent<Result<O, E>, T> {
+	pub fn ok_op(self) -> Result<ExpressionComponent<O, T>, E> {
+		Ok(match self {
+			ExpressionComponent::Token(token) => ExpressionComponent::Token(token),
+			ExpressionComponent::Paren(paren) => {
+				ExpressionComponent::Paren(Box::new(paren.ok_op()?))
+			}
+		})
+	}
+}
+
 impl<O: Clone, T: Clone> Expression<O, T> {
 	pub fn new(first: T) -> Self {
 		Self {
@@ -289,6 +300,19 @@ impl<O: Clone, T: Clone, E: Clone> Expression<O, Result<T, E>> {
 		};
 		for Pair(op, component) in self.pairs {
 			e.pairs.push(Pair(op, component.ok()?));
+		}
+		Ok(e)
+	}
+}
+
+impl<O: Clone, T: Clone, E: Clone> Expression<Result<O, E>, T> {
+	pub fn ok_op(self) -> Result<Expression<O, T>, E> {
+		let mut e = Expression {
+			first: self.first.ok_op()?,
+			pairs: Vec::new(),
+		};
+		for Pair(op, component) in self.pairs {
+			e.pairs.push(Pair(op?, component.ok_op()?));
 		}
 		Ok(e)
 	}

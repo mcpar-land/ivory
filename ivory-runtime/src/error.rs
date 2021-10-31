@@ -1,7 +1,6 @@
-use ivory_tokenizer::{expression::Op, ErrorKind};
 use quick_error::quick_error;
 
-use crate::value::ValueKind;
+use crate::{expr::RolledOp, value::ValueKind};
 
 pub type Result<T> = std::result::Result<T, RuntimeError>;
 
@@ -12,7 +11,7 @@ quick_error! {
 			from()
 			display(s) -> ("Syntax error: {}", err)
 		}
-		CannotRunOp(lhs: ValueKind, op: Op, rhs: ValueKind) {
+		CannotRunOp(lhs: ValueKind, op: RolledOp, rhs: ValueKind) {
 			display(s) -> ("Cannot perform operation {} {} {}", lhs, op, rhs)
 		}
 		WrongExpectedValue(expected: ValueKind, got: ValueKind) {

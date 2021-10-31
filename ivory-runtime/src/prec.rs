@@ -5,13 +5,7 @@ use std::marker::PhantomData;
 pub trait Token<Re, Err, Ctx = ()> {
 	fn convert(self, ctx: &Ctx) -> Result<Re, Err>;
 }
-pub struct Climber<
-	Op: Hash + Eq + Copy,
-	To: Token<Re, Err, Ctx> + Clone,
-	Re,
-	Err,
-	Ctx = (),
-> {
+pub struct Climber<Op, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx = ()> {
 	pub rules: fn(&Op, &Ctx) -> (usize, Assoc),
 	/// Function to handle the result of an operator between two tokens.
 	///
@@ -26,7 +20,7 @@ pub struct Climber<
 	p_ctx: PhantomData<Ctx>,
 }
 
-impl<Op: Hash + Eq + Copy, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx>
+impl<Op: Clone, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx>
 	Climber<Op, To, Re, Err, Ctx>
 {
 	pub fn new(
@@ -84,7 +78,7 @@ impl<Op: Hash + Eq + Copy, To: Token<Re, Err, Ctx> + Clone, Re, Err, Ctx>
 						break;
 					}
 				}
-				lhs = (self.handler)(lhs, *rule, rhs, ctx)?;
+				lhs = (self.handler)(lhs, rule.clone(), rhs, ctx)?;
 			} else {
 				break;
 			}
@@ -103,12 +97,12 @@ pub enum Assoc {
 ///
 /// It's impossible to throw an error due to the order of `token, operator, token` not being respected.
 #[derive(Debug, Clone)]
-pub struct Expression<Op: Copy, To: Clone> {
+pub struct Expression<Op: Clone, To: Clone> {
 	pub first_token: To,
 	pub pairs: Vec<(Op, To)>,
 }
 
-impl<Op: Copy, To: Clone> Expression<Op, To> {
+impl<Op: Clone, To: Clone> Expression<Op, To> {
 	/// ```ignore
 	/// // 5 * 6 + 3 / 2 ^ 4
 	/// let expression = Expression::new(
@@ -148,84 +142,84 @@ impl<Op: Copy + PartialEq, To: Clone + PartialEq> PartialEq
 
 impl<Op: Copy + Eq, To: Clone + Eq> Eq for Expression<Op, To> {}
 
-#[cfg(test)]
-mod test {
-	use super::*;
+// #[cfg(test)]
+// mod test {
+// 	use super::*;
 
-	fn c(
-		expression: &Expression<MathOperator, MathToken>,
-		ctx: &f32,
-	) -> Result<f32, &'static str> {
-		use MathOperator::*;
-		let climber = Climber::new(
-			|op, _| match op {
-				Add | Sub => (0, Assoc::Left),
-				Mul | Div => (1, Assoc::Left),
-			},
-			|lhs: MathToken, op: MathOperator, rhs: MathToken, ctx: &f32| {
-				let lhs: f32 = lhs.convert(ctx)?;
-				let rhs: f32 = rhs.convert(ctx)?;
-				Ok(match op {
-					Add => MathToken::Num(lhs + rhs),
-					Sub => MathToken::Num(lhs - rhs),
-					Mul => MathToken::Num(lhs * rhs),
-					Div => MathToken::Num(lhs / rhs),
-				})
-			},
-		);
-		climber.process(&expression, ctx)
-	}
+// 	fn c(
+// 		expression: &Expression<MathOperator, MathToken>,
+// 		ctx: &f32,
+// 	) -> Result<f32, &'static str> {
+// 		use MathOperator::*;
+// 		let climber = Climber::new(
+// 			|op, _| match op {
+// 				Add | Sub => (0, Assoc::Left),
+// 				Mul | Div => (1, Assoc::Left),
+// 			},
+// 			|lhs: MathToken, op: MathOperator, rhs: MathToken, ctx: &f32| {
+// 				let lhs: f32 = lhs.convert(ctx)?;
+// 				let rhs: f32 = rhs.convert(ctx)?;
+// 				Ok(match op {
+// 					Add => MathToken::Num(lhs + rhs),
+// 					Sub => MathToken::Num(lhs - rhs),
+// 					Mul => MathToken::Num(lhs * rhs),
+// 					Div => MathToken::Num(lhs / rhs),
+// 				})
+// 			},
+// 		);
+// 		climber.process(&expression, ctx)
+// 	}
 
-	#[derive(Hash, Eq, PartialEq, Copy, Clone)]
-	pub enum MathOperator {
-		Add,
-		Sub,
-		Mul,
-		Div,
-	}
+// 	#[derive(Hash, Eq, PartialEq, Copy, Clone)]
+// 	pub enum MathOperator {
+// 		Add,
+// 		Sub,
+// 		Mul,
+// 		Div,
+// 	}
 
-	#[derive(Clone)]
-	pub enum MathToken {
-		Paren(Box<Expression<MathOperator, MathToken>>),
-		Num(f32),
-		X,
-	}
+// 	#[derive(Clone)]
+// 	pub enum MathToken {
+// 		Paren(Box<Expression<MathOperator, MathToken>>),
+// 		Num(f32),
+// 		X,
+// 	}
 
-	impl Token<f32, &'static str, f32> for MathToken {
-		fn convert(self, ctx: &f32) -> Result<f32, &'static str> {
-			Ok(match self {
-				MathToken::Paren(expr) => c(expr.as_ref(), ctx)?,
-				MathToken::Num(n) => n,
-				MathToken::X => *ctx,
-			})
-		}
-	}
+// 	impl Token<f32, &'static str, f32> for MathToken {
+// 		fn convert(self, ctx: &f32) -> Result<f32, &'static str> {
+// 			Ok(match self {
+// 				MathToken::Paren(expr) => c(expr.as_ref(), ctx)?,
+// 				MathToken::Num(n) => n,
+// 				MathToken::X => *ctx,
+// 			})
+// 		}
+// 	}
 
-	#[test]
-	fn process() {
-		let res = c(
-			&Expression::new(
-				MathToken::Num(7.0),
-				vec![(MathOperator::Add, MathToken::X)],
-			),
-			&8.0,
-		)
-		.unwrap();
+// 	#[test]
+// 	fn process() {
+// 		let res = c(
+// 			&Expression::new(
+// 				MathToken::Num(7.0),
+// 				vec![(MathOperator::Add, MathToken::X)],
+// 			),
+// 			&8.0,
+// 		)
+// 		.unwrap();
 
-		assert_eq!(res, 15.0);
-	}
-	#[test]
-	fn proces_complex() {
-		use MathOperator::*;
-		use MathToken::*;
-		let res = c(
-			&Expression::new(
-				Num(10.0),
-				vec![(Add, Num(5.0)), (Mul, Num(3.0)), (Add, Num(1.0))],
-			),
-			&8.0,
-		)
-		.unwrap();
-		println!("{}", res);
-	}
-}
+// 		assert_eq!(res, 15.0);
+// 	}
+// 	#[test]
+// 	fn proces_complex() {
+// 		use MathOperator::*;
+// 		use MathToken::*;
+// 		let res = c(
+// 			&Expression::new(
+// 				Num(10.0),
+// 				vec![(Add, Num(5.0)), (Mul, Num(3.0)), (Add, Num(1.0))],
+// 			),
+// 			&8.0,
+// 		)
+// 		.unwrap();
+// 		println!("{}", res);
+// 	}
+// }

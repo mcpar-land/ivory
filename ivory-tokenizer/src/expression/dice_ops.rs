@@ -10,13 +10,13 @@ use nom::{
 
 use crate::Parse;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Copy)]
+#[derive(Clone, Debug)]
 pub struct DiceOp {
 	pub op: DiceOpCmp,
 	pub cmp: DiceCmp,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Copy)]
+#[derive(Clone, Debug)]
 pub enum DiceOpCmp {
 	Keep,
 	Reroll,
@@ -25,7 +25,7 @@ pub enum DiceOpCmp {
 	ExplodeContinuous,
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Copy)]
+#[derive(Clone, Debug)]
 pub enum DiceCmp {
 	Gt,
 	Lt,

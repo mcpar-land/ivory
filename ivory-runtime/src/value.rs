@@ -15,6 +15,7 @@ use rand::Rng;
 
 use crate::{
 	error::RuntimeError,
+	expr::RolledOp,
 	roll::Roll,
 	runtime::{Runtime, RuntimeContext},
 };
@@ -114,7 +115,7 @@ impl Value {
 		}
 	}
 
-	pub fn run_op(&self, rhs: &Value, op: &Op) -> Result<Value> {
+	pub fn run_op(&self, rhs: &Value, op: &RolledOp) -> Result<Value> {
 		use Value::*;
 		match (self, rhs) {
 			(Integer(a), Integer(b)) => a.op(b, op),
@@ -396,22 +397,22 @@ impl PartialEq for Value {
 	}
 }
 
-fn same_op_err(kind: ValueKind, op: &Op) -> Result<Value> {
+fn same_op_err(kind: ValueKind, op: &RolledOp) -> Result<Value> {
 	Err(RuntimeError::CannotRunOp(kind, op.clone(), kind))
 }
 
 trait RunOp {
-	fn op(&self, other: &Self, op: &Op) -> Result<Value>;
+	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value>;
 }
 
 impl RunOp for i32 {
-	fn op(&self, other: &Self, op: &Op) -> Result<Value> {
+	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value> {
 		Ok(Value::Integer(match op {
-			Op::Math(op) => match op.kind {
+			RolledOp::Math { kind, round } => match kind {
 				ExprOpMathKind::Add => self + other,
 				ExprOpMathKind::Sub => self - other,
 				ExprOpMathKind::Mul => self * other,
-				ExprOpMathKind::Div => match &op.round {
+				ExprOpMathKind::Div => match &round {
 					Some(round) => match round {
 						ExprOpMathRound::Up => (self + (other - 1)) / other,
 						ExprOpMathRound::Down => self / other,
@@ -428,16 +429,16 @@ impl RunOp for i32 {
 }
 
 impl RunOp for f32 {
-	fn op(&self, other: &Self, op: &Op) -> Result<Value> {
+	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value> {
 		match op {
-			Op::Math(op) => {
-				let res = match op.kind {
+			RolledOp::Math { kind, round } => {
+				let res = match kind {
 					ExprOpMathKind::Add => self + other,
 					ExprOpMathKind::Sub => self - other,
 					ExprOpMathKind::Mul => self * other,
 					ExprOpMathKind::Div => self / other,
 				};
-				Ok(Value::Decimal(match &op.round {
+				Ok(Value::Decimal(match &round {
 					Some(round) => match round {
 						ExprOpMathRound::Up => res.ceil(),
 						ExprOpMathRound::Down => res.floor(),
@@ -452,24 +453,24 @@ impl RunOp for f32 {
 }
 
 impl RunOp for String {
-	fn op(&self, other: &Self, op: &Op) -> Result<Value> {
+	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value> {
 		match op {
-			Op::Math(ExprOpMath {
+			RolledOp::Math {
 				kind: ExprOpMathKind::Add,
 				..
-			}) => Ok(Value::String(format!("{}{}", self, other))),
+			} => Ok(Value::String(format!("{}{}", self, other))),
 			_ => same_op_err(ValueKind::String, op),
 		}
 	}
 }
 
 impl RunOp for Vec<Value> {
-	fn op(&self, other: &Self, op: &Op) -> Result<Value> {
+	fn op(&self, other: &Self, op: &RolledOp) -> Result<Value> {
 		match op {
-			Op::Math(ExprOpMath {
+			RolledOp::Math {
 				kind: ExprOpMathKind::Add,
 				..
-			}) => Ok(Value::Array([self.as_slice(), other.as_slice()].concat())),
+			} => Ok(Value::Array([self.as_slice(), other.as_slice()].concat())),
 			_ => same_op_err(ValueKind::Array, op),
 		}
 	}
@@ -585,10 +586,10 @@ fn auto_converting_ops() {
 		Value::Integer(10)
 			.run_op(
 				&Value::Decimal(6.9),
-				&Op::Math(ExprOpMath {
+				&RolledOp::Math {
 					kind: ExprOpMathKind::Add,
 					round: None
-				})
+				}
 			)
 			.unwrap(),
 		Value::Decimal(16.9)
@@ -597,10 +598,10 @@ fn auto_converting_ops() {
 		Value::String("foo ".to_string())
 			.run_op(
 				&Value::Decimal(69.0),
-				&Op::Math(ExprOpMath {
+				&RolledOp::Math {
 					kind: ExprOpMathKind::Add,
 					round: None
-				})
+				}
 			)
 			.unwrap(),
 		Value::String("foo 69".to_string())
@@ -609,10 +610,10 @@ fn auto_converting_ops() {
 		Value::Array(vec![Value::Integer(69), Value::String("nice".to_string())])
 			.run_op(
 				&Value::Array(vec![Value::Boolean(true),]),
-				&Op::Math(ExprOpMath {
+				&RolledOp::Math {
 					kind: ExprOpMathKind::Add,
 					round: None
-				})
+				}
 			)
 			.unwrap(),
 		Value::Array(vec![

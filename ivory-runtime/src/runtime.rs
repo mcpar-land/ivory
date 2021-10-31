@@ -1,5 +1,6 @@
 use crate::{
-	mod_loader::ModLoader, roll::Roll, value::Value, Result, RuntimeError,
+	expr::RolledOp, mod_loader::ModLoader, roll::Roll, value::Value, Result,
+	RuntimeError,
 };
 use ivory_expression::{Expression, ExpressionComponent};
 use ivory_tokenizer::{
@@ -62,7 +63,7 @@ impl<R: Rng> Runtime<R> {
 		todo!();
 	}
 
-	pub fn run(&self, cmd: &str) -> Result<Expression<ExprOpMath, Value>> {
+	pub fn run(&self, cmd: &str) -> Result<Expression<RolledOp, Value>> {
 		let ex = tokenize::<Expression<Op, ExpressionToken>>(cmd)?;
 		Ok(self.execute(&RuntimeContext::new(), &ex)?)
 	}
@@ -138,7 +139,7 @@ impl<R: Rng> Runtime<R> {
 		&self,
 		ctx: &RuntimeContext,
 		expr: &Expression<Op, ExpressionToken>,
-	) -> Result<Expression<ExprOpMath, Value>> {
+	) -> Result<Expression<RolledOp, Value>> {
 		self.roll(ctx, &self.valueify(ctx, expr)?)
 	}
 
@@ -161,7 +162,7 @@ impl<R: Rng> Runtime<R> {
 		&self,
 		ctx: &RuntimeContext,
 		expr: &Expression<Op, Value>,
-	) -> Result<Expression<ExprOpMath, Value>> {
+	) -> Result<Expression<RolledOp, Value>> {
 		let rolled = expr.collapse::<_, RuntimeError>(|lhs, op, rhs| match op {
 			Op::Dice => {
 				let count = self.val_expr_component_collapse(ctx, lhs)?;
@@ -197,10 +198,20 @@ impl<R: Rng> Runtime<R> {
 				Op::Dice => unreachable!(),
 			})?;
 
-		let converted_ops = handled_ops.map_operators(|op| match op {
-			Op::Math(op) => *op,
-			_ => unreachable!(),
-		});
+		let converted_ops = handled_ops
+			.map_operators(|op| match op {
+				Op::Math(ExprOpMath::Binary { kind, round }) => {
+					std::result::Result::<RolledOp, RuntimeError>::Ok(RolledOp::Math {
+						kind: kind.clone(),
+						round: round.clone(),
+					})
+				}
+				Op::Math(ExprOpMath::Ternary(expr)) => Ok(RolledOp::Ternary(Box::new(
+					self.execute(ctx, expr.as_ref())?,
+				))),
+				_ => unreachable!(),
+			})
+			.ok_op()?;
 
 		Ok(converted_ops)
 	}
@@ -228,7 +239,7 @@ impl<R: Rng> Runtime<R> {
 
 	pub fn math_to_value(
 		&self,
-		expr: Expression<ExprOpMath, Value>,
+		expr: Expression<RolledOp, Value>,
 	) -> Result<Value> {
 		Ok(expr.try_into()?)
 	}

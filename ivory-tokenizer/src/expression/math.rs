@@ -1,25 +1,48 @@
 use colored::*;
+use ivory_expression::Expression;
 use std::fmt::Display;
 
-use nom::{character::complete::one_of, combinator::opt};
+use nom::{
+	branch::alt,
+	bytes::complete::tag,
+	character::complete::{multispace0, one_of},
+	combinator::{map, opt},
+	sequence::{delimited, pair},
+};
 
 use crate::Parse;
 
-#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
-pub struct ExprOpMath {
-	pub kind: ExprOpMathKind,
-	pub round: Option<ExprOpMathRound>,
+use super::{ExpressionToken, Op};
+
+#[derive(Clone, Debug)]
+pub enum ExprOpMath {
+	Binary {
+		kind: ExprOpMathKind,
+		round: Option<ExprOpMathRound>,
+	},
+	Ternary(Box<Expression<Op, ExpressionToken>>),
 }
 
 impl Parse for ExprOpMath {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		let (input, kind) = ExprOpMathKind::parse(input)?;
-		let (input, round) = opt(ExprOpMathRound::parse)(input)?;
-		Ok((input, Self { kind, round }))
+		alt((
+			map(
+				pair(ExprOpMathKind::parse, opt(ExprOpMathRound::parse)),
+				|(kind, round)| Self::Binary { kind, round },
+			),
+			map(
+				delimited(
+					pair(tag("?"), multispace0),
+					Expression::parse,
+					pair(multispace0, tag(":")),
+				),
+				|expr| Self::Ternary(Box::new(expr)),
+			),
+		))(input)
 	}
 }
 
-#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub enum ExprOpMathKind {
 	Add,
 	Sub,
@@ -59,7 +82,7 @@ impl Display for ExprOpMathKind {
 	}
 }
 
-#[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub enum ExprOpMathRound {
 	Up,
 	Down,
@@ -98,9 +121,12 @@ impl Display for ExprOpMathRound {
 
 impl Display for ExprOpMath {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self.round {
-			Some(round) => write!(f, "{}{}", self.kind, round),
-			None => write!(f, "{}", self.kind),
+		match self {
+			ExprOpMath::Binary { kind, round } => match round {
+				Some(round) => write!(f, "{}{}", kind, round),
+				None => write!(f, "{}", kind),
+			},
+			ExprOpMath::Ternary(expr) => write!(f, "? {} :", expr),
 		}
 	}
 }
