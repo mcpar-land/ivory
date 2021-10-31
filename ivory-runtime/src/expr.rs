@@ -1,5 +1,7 @@
 use std::convert::TryInto;
 
+use crate::prec;
+use crate::prec::{Assoc, Climber, Token};
 use ivory_expression::{Expression, ExpressionComponent, Pair};
 use ivory_tokenizer::expression::dice_ops::{DiceOp, DiceOpCmp};
 use ivory_tokenizer::expression::math::{
@@ -7,7 +9,6 @@ use ivory_tokenizer::expression::math::{
 };
 use ivory_tokenizer::expression::{ExpressionToken, Op};
 use lazy_static::lazy_static;
-use prec::{Assoc, Climber, Rule, Token};
 
 use crate::runtime::{Runtime, RuntimeContext};
 use crate::value::Value;
@@ -80,10 +81,12 @@ fn every_rule(src: ExprOpMathKind) -> Rule<ExprOpMath> {
 lazy_static! {
 	pub static ref PREC_CLIMBER: Climber<ExprOpMath, Component, Value, RuntimeError> =
 		Climber::new(
-			vec![
-				every_rule(ExprOpMathKind::Add) | every_rule(ExprOpMathKind::Sub),
-				every_rule(ExprOpMathKind::Mul) | every_rule(ExprOpMathKind::Div)
-			],
+			|op, _| {
+				match op.kind {
+					ExprOpMathKind::Add | ExprOpMathKind::Sub => todo!(),
+					ExprOpMathKind::Mul | ExprOpMathKind::Div => todo!(),
+				}
+			},
 			prec_handler
 		);
 }
