@@ -126,7 +126,7 @@ impl Value {
 		use Value::*;
 		match op {
 			RolledOp::Ternary(ternary) => {
-				if *self.to_boolean()? {
+				if self.to_boolean()? {
 					runtime.math_to_value(ternary.as_ref().clone(), ctx)
 				} else {
 					Ok(rhs.clone())
@@ -207,14 +207,17 @@ impl Value {
 		}
 	}
 
-	pub fn to_boolean(&self) -> Result<&bool> {
-		if let Self::Boolean(v) = self {
-			Ok(v)
-		} else {
-			Err(RuntimeError::WrongExpectedValue(
-				ValueKind::Boolean,
-				self.kind(),
-			))
+	pub fn to_boolean(&self) -> Result<bool> {
+		match self {
+			Value::Integer(i) => Ok(*i != 0),
+			Value::Decimal(d) => Ok(*d != 0.0),
+			Value::Boolean(b) => Ok(*b),
+			Value::String(s) => Ok(s.len() > 0),
+			Value::Roll(r) => Ok(r.value() > 0),
+			Value::Array(a) => Ok(a.len() > 0),
+			Value::Object(o) => Ok(o.len() > 0),
+			Value::Function(_) => Ok(true),
+			Value::Struct(_) => Ok(true),
 		}
 	}
 
@@ -420,7 +423,8 @@ impl PartialEq for Value {
 			(Array(l0), Array(r0)) => l0 == r0,
 			(Object(l0), Object(r0)) => l0 == r0,
 			(Function(_), Function(_)) => false,
-			_ => todo!(),
+			(Decimal(a), Integer(b)) | (Integer(b), Decimal(a)) => *b as f32 == *a,
+			_ => false,
 		}
 	}
 }
@@ -648,7 +652,7 @@ impl Display for Value {
 				write!(f, "{}", v.to_string().cyan())
 			}
 			Value::String(v) => {
-				write!(f, "\"{}\"", v.to_string().cyan())
+				write!(f, "{}", format!("\"{}\"", v.to_string()).yellow())
 			}
 			Value::Roll(v) => {
 				write!(f, "{}", v.to_string().cyan())
