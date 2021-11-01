@@ -32,4 +32,27 @@ jobs:
           asset_path: ./target/debug/ivory-repl.exe
           asset_name: ivory_windows-nightly-$$.exe
           asset_content_type: application/octet-stream
+      - name: Deploy Linux release
+        if: matrix.os == 'ubuntu-latest'
+        uses: WebFreak001/deploy-nightly@v1.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: https://uploads.github.com/repos/mcpar-land/ivory/releases/52478105/assets{?name,label}
+          release_id: 52478105
+          asset_path: ./target/debug/ivory-repl
+          asset_name: ivory_ubuntu-nightly-$$
+          asset_content_type: application/octet-stream
+      - name: Deploy Mac OS release
+        if: matrix.os == 'macOS-latest'
+        uses: WebFreak001/deploy-nightly@v1.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: https://uploads.github.com/repos/mcpar-land/ivory/releases/52478105/assets{?name,label}
+          release_id: 52478105
+          asset_path: ./target/debug/ivory-repl
+          asset_name: ivory_macOS-nightly-$$
+          asset_content_type: application/octet-stream
+        
           
