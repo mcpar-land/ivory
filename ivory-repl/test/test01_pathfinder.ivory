@@ -14,7 +14,8 @@ int_mod = ability_mod(int);
 wis_mod = ability_mod(wis);
 cha_mod = ability_mod(cha);
 
-ability_check = ability -> 1d20 + ability_mod(ability);
+ability_check = ability -> 1d20 
+	+ ability_mod(ability);
 
 str_check = ability_check(str);
 dex_check = ability_check(dex);

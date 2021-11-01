@@ -1,16 +1,11 @@
-use std::convert::TryInto;
 use std::fmt::Display;
 
 use crate::prec;
-use crate::prec::{Assoc, Climber, Token};
 use ivory_expression::{Expression, ExpressionComponent, Pair};
-use ivory_tokenizer::expression::dice_ops::{DiceOp, DiceOpCmp};
-use ivory_tokenizer::expression::math::{
-	ExprOpMath, ExprOpMathKind, ExprOpMathRound,
-};
-use ivory_tokenizer::expression::{ExpressionToken, Op};
-use lazy_static::lazy_static;
-use rand::prelude::ThreadRng;
+
+use ivory_tokenizer::expression::logic::{Comparator, LogicOp};
+use ivory_tokenizer::expression::math::{ExprOpMathKind, ExprOpMathRound};
+
 use rand::Rng;
 
 use crate::runtime::{Runtime, RuntimeContext};
@@ -24,6 +19,8 @@ pub enum RolledOp {
 		round: Option<ExprOpMathRound>,
 	},
 	Ternary(Box<Expression<RolledOp, Value>>),
+	Comparator(Comparator),
+	Logic(LogicOp),
 }
 
 impl Display for RolledOp {
@@ -34,6 +31,9 @@ impl Display for RolledOp {
 				None => write!(f, "{}", kind),
 			},
 			Self::Ternary(expr) => write!(f, "? {} :", expr),
+
+			RolledOp::Comparator(c) => write!(f, "{}", c),
+			RolledOp::Logic(l) => write!(f, "{}", l),
 		}
 	}
 }

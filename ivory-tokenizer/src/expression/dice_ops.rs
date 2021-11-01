@@ -10,10 +10,12 @@ use nom::{
 
 use crate::Parse;
 
+use super::logic::Comparator;
+
 #[derive(Clone, Debug)]
 pub struct DiceOp {
 	pub op: DiceOpCmp,
-	pub cmp: DiceCmp,
+	pub cmp: Comparator,
 }
 
 #[derive(Clone, Debug)]
@@ -25,20 +27,10 @@ pub enum DiceOpCmp {
 	ExplodeContinuous,
 }
 
-#[derive(Clone, Debug)]
-pub enum DiceCmp {
-	Gt,
-	Lt,
-	Eq,
-	GtEq,
-	LtEq,
-}
-
 impl Parse for DiceOp {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		map(pair(DiceOpCmp::parse, DiceCmp::parse), |(op, cmp)| DiceOp {
-			op,
-			cmp,
+		map(pair(DiceOpCmp::parse, Comparator::parse), |(op, cmp)| {
+			DiceOp { op, cmp }
 		})(input)
 	}
 }
@@ -61,18 +53,6 @@ impl Parse for DiceOpCmp {
 	}
 }
 
-impl Parse for DiceCmp {
-	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		alt((
-			value(DiceCmp::GtEq, tag(">=")),
-			value(DiceCmp::LtEq, tag("<=")),
-			value(DiceCmp::Eq, tag("==")),
-			value(DiceCmp::Gt, tag(">")),
-			value(DiceCmp::Lt, tag("<")),
-		))(input)
-	}
-}
-
 impl Display for DiceOpCmp {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(
@@ -84,23 +64,6 @@ impl Display for DiceOpCmp {
 				DiceOpCmp::RerollContinuous => "rr",
 				DiceOpCmp::Explode => "!",
 				DiceOpCmp::ExplodeContinuous => "!!",
-			}
-			.red()
-		)
-	}
-}
-
-impl Display for DiceCmp {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(
-			f,
-			"{}",
-			match self {
-				DiceCmp::Gt => ">",
-				DiceCmp::Lt => "<",
-				DiceCmp::Eq => "==",
-				DiceCmp::GtEq => ">=",
-				DiceCmp::LtEq => "<=",
 			}
 			.red()
 		)

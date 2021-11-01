@@ -1,6 +1,7 @@
 use colored::*;
 use ivory_tokenizer::{
 	expression::{
+		logic::{Comparator, LogicOp},
 		math::{ExprOpMath, ExprOpMathKind, ExprOpMathRound},
 		Op,
 	},
@@ -123,50 +124,53 @@ impl Value {
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		use Value::*;
-		if let RolledOp::Ternary(ternary) = &op {
-			if *self.to_boolean()? {
-				return runtime.math_to_value(ternary.as_ref().clone(), ctx);
-			} else {
-				return Ok(rhs.clone());
+		match op {
+			RolledOp::Ternary(ternary) => {
+				if *self.to_boolean()? {
+					runtime.math_to_value(ternary.as_ref().clone(), ctx)
+				} else {
+					Ok(rhs.clone())
+				}
 			}
-		}
-
-		match (self, rhs) {
-			(Integer(a), Integer(b)) => a.op(b, op, runtime, ctx),
-			(Integer(a), Decimal(b)) => (*a as f32).op(b, op, runtime, ctx),
-			(Integer(a), Boolean(b)) => a.op(&(*b as i32), op, runtime, ctx),
-			(Integer(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
-			(Integer(a), Roll(b)) => a.op(&(b.value() as i32), op, runtime, ctx),
-			(Decimal(a), Integer(b)) => a.op(&(*b as f32), op, runtime, ctx),
-			(Decimal(a), Decimal(b)) => a.op(b, op, runtime, ctx),
-			(Decimal(a), Boolean(b)) => a.op(&(*b as i32 as f32), op, runtime, ctx),
-			(Decimal(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
-			(Decimal(a), Roll(b)) => a.op(&(b.value() as f32), op, runtime, ctx),
-			(Boolean(a), Integer(b)) => (*a as i32).op(b, op, runtime, ctx),
-			(Boolean(a), Decimal(b)) => (*a as i32 as f32).op(b, op, runtime, ctx),
-			(Boolean(a), Boolean(b)) => {
-				(*a as i32).op(&(*b as i32), op, runtime, ctx)
-			}
-			(Boolean(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
-			(Boolean(a), Roll(b)) => {
-				(*a as i32).op(&(b.value() as i32), op, runtime, ctx)
-			}
-			(String(a), Integer(b)) => a.op(&b.to_string(), op, runtime, ctx),
-			(String(a), Decimal(b)) => a.op(&b.to_string(), op, runtime, ctx),
-			(String(a), Boolean(b)) => a.op(&b.to_string(), op, runtime, ctx),
-			(String(a), String(b)) => a.op(b, op, runtime, ctx),
-			(String(a), Roll(b)) => a.op(&format!("{}", b), op, runtime, ctx),
-			(Roll(a), Integer(b)) => (a.value() as i32).op(b, op, runtime, ctx),
-			(Roll(a), Decimal(b)) => (a.value() as f32).op(b, op, runtime, ctx),
-			(Roll(a), Boolean(b)) => {
-				(a.value() as i32).op(&(*b as i32), op, runtime, ctx)
-			}
-			(Roll(a), String(b)) => format!("{}", a).op(b, op, runtime, ctx),
-			(Roll(a), Roll(b)) => {
-				(a.value() as i32).op(&(b.value() as i32), op, runtime, ctx)
-			}
-			(Array(a), Array(b)) => a.op(b, op, runtime, ctx),
-			(a, b) => Err(RuntimeError::CannotRunOp(a.kind(), op.clone(), b.kind())),
+			op => match (self, rhs) {
+				(Integer(a), Integer(b)) => a.op(b, op, runtime, ctx),
+				(Integer(a), Decimal(b)) => (*a as f32).op(b, op, runtime, ctx),
+				(Integer(a), Boolean(b)) => a.op(&(*b as i32), op, runtime, ctx),
+				(Integer(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
+				(Integer(a), Roll(b)) => a.op(&(b.value() as i32), op, runtime, ctx),
+				(Decimal(a), Integer(b)) => a.op(&(*b as f32), op, runtime, ctx),
+				(Decimal(a), Decimal(b)) => a.op(b, op, runtime, ctx),
+				(Decimal(a), Boolean(b)) => a.op(&(*b as i32 as f32), op, runtime, ctx),
+				(Decimal(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
+				(Decimal(a), Roll(b)) => a.op(&(b.value() as f32), op, runtime, ctx),
+				(Boolean(a), Integer(b)) => (*a as i32).op(b, op, runtime, ctx),
+				(Boolean(a), Decimal(b)) => (*a as i32 as f32).op(b, op, runtime, ctx),
+				(Boolean(a), Boolean(b)) => {
+					(*a as i32).op(&(*b as i32), op, runtime, ctx)
+				}
+				(Boolean(a), String(b)) => a.to_string().op(b, op, runtime, ctx),
+				(Boolean(a), Roll(b)) => {
+					(*a as i32).op(&(b.value() as i32), op, runtime, ctx)
+				}
+				(String(a), Integer(b)) => a.op(&b.to_string(), op, runtime, ctx),
+				(String(a), Decimal(b)) => a.op(&b.to_string(), op, runtime, ctx),
+				(String(a), Boolean(b)) => a.op(&b.to_string(), op, runtime, ctx),
+				(String(a), String(b)) => a.op(b, op, runtime, ctx),
+				(String(a), Roll(b)) => a.op(&format!("{}", b), op, runtime, ctx),
+				(Roll(a), Integer(b)) => (a.value() as i32).op(b, op, runtime, ctx),
+				(Roll(a), Decimal(b)) => (a.value() as f32).op(b, op, runtime, ctx),
+				(Roll(a), Boolean(b)) => {
+					(a.value() as i32).op(&(*b as i32), op, runtime, ctx)
+				}
+				(Roll(a), String(b)) => format!("{}", a).op(b, op, runtime, ctx),
+				(Roll(a), Roll(b)) => {
+					(a.value() as i32).op(&(b.value() as i32), op, runtime, ctx)
+				}
+				(Array(a), Array(b)) => a.op(b, op, runtime, ctx),
+				(a, b) => {
+					Err(RuntimeError::CannotRunOp(a.kind(), op.clone(), b.kind()))
+				}
+			},
 		}
 	}
 
@@ -442,7 +446,10 @@ impl RunOp for bool {
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
-			RolledOp::Ternary(true_value) => todo!(),
+			RolledOp::Logic(l) => Ok(Value::Boolean(match l {
+				LogicOp::And => *self && *other,
+				LogicOp::Or => *self || *other,
+			})),
 			_ => return same_op_err(ValueKind::Boolean, op),
 		}
 	}
@@ -456,8 +463,8 @@ impl RunOp for i32 {
 		runtime: &Runtime<R>,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
-		Ok(Value::Integer(match op {
-			RolledOp::Math { kind, round } => match kind {
+		match op {
+			RolledOp::Math { kind, round } => Ok(Value::Integer(match kind {
 				ExprOpMathKind::Add => self + other,
 				ExprOpMathKind::Sub => self - other,
 				ExprOpMathKind::Mul => self * other,
@@ -471,9 +478,16 @@ impl RunOp for i32 {
 					},
 					None => self / other,
 				},
-			},
+			})),
+			RolledOp::Comparator(c) => Ok(Value::Boolean(match c {
+				Comparator::Gt => *self > *other,
+				Comparator::Lt => *self < *other,
+				Comparator::GtEq => *self >= *other,
+				Comparator::LtEq => *self <= *other,
+				Comparator::Eq => *self == *other,
+			})),
 			_ => return same_op_err(ValueKind::Integer, op),
-		}))
+		}
 	}
 }
 
@@ -502,6 +516,13 @@ impl RunOp for f32 {
 					None => res,
 				}))
 			}
+			RolledOp::Comparator(c) => Ok(Value::Boolean(match c {
+				Comparator::Gt => *self > *other,
+				Comparator::Lt => *self < *other,
+				Comparator::GtEq => *self >= *other,
+				Comparator::LtEq => *self <= *other,
+				Comparator::Eq => *self == *other,
+			})),
 			_ => same_op_err(ValueKind::Decimal, op),
 		}
 	}

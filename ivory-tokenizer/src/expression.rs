@@ -1,4 +1,5 @@
 pub mod dice_ops;
+pub mod logic;
 pub mod math;
 
 use colored::*;
@@ -23,6 +24,7 @@ use crate::{
 
 use self::{
 	dice_ops::DiceOp,
+	logic::{Comparator, LogicOp},
 	math::{ExprOpMath, ExprOpMathRound},
 };
 
@@ -65,6 +67,8 @@ pub enum Op {
 	Dice,
 	Math(ExprOpMath),
 	DiceOp(DiceOp),
+	Comparator(Comparator),
+	Logic(LogicOp),
 }
 
 impl Parse for Op {
@@ -73,6 +77,8 @@ impl Parse for Op {
 			value(Op::Dice, tag("d")),
 			map(ExprOpMath::parse, |m| Op::Math(m)),
 			map(DiceOp::parse, |d| Op::DiceOp(d)),
+			map(Comparator::parse, |c| Self::Comparator(c)),
+			map(LogicOp::parse, |l| Self::Logic(l)),
 		))(input)
 	}
 }
@@ -83,6 +89,8 @@ impl Display for Op {
 			Op::Dice => write!(f, "{}", "d".red()),
 			Op::Math(op) => write!(f, "{}", op),
 			Op::DiceOp(op) => write!(f, "{}", op),
+			Op::Comparator(op) => write!(f, "{}", op),
+			Op::Logic(op) => write!(f, "{}", op),
 		}
 	}
 }

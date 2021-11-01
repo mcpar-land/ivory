@@ -62,9 +62,11 @@ impl<R: Rng> Runtime<R> {
 		let climber = Climber::new(
 			|op, _, _| match op {
 				RolledOp::Ternary(_) => (0, Assoc::Right),
+				RolledOp::Logic(_) => (1, Assoc::Left),
+				RolledOp::Comparator(_) => (2, Assoc::Left),
 				RolledOp::Math { kind, .. } => match kind {
-					ExprOpMathKind::Add | ExprOpMathKind::Sub => (1, Assoc::Left),
-					ExprOpMathKind::Mul | ExprOpMathKind::Div => (2, Assoc::Right),
+					ExprOpMathKind::Add | ExprOpMathKind::Sub => (3, Assoc::Left),
+					ExprOpMathKind::Mul | ExprOpMathKind::Div => (4, Assoc::Right),
 				},
 			},
 			Self::prec_handler,
@@ -238,8 +240,8 @@ impl<R: Rng> Runtime<R> {
 					}
 					Ok(false)
 				}
-				Op::Math(_) => Ok(true),
 				Op::Dice => unreachable!(),
+				_ => Ok(true),
 			})?;
 
 		let converted_ops = handled_ops
@@ -253,6 +255,8 @@ impl<R: Rng> Runtime<R> {
 				Op::Math(ExprOpMath::Ternary(expr)) => Ok(RolledOp::Ternary(Box::new(
 					self.execute(ctx, expr.as_ref())?,
 				))),
+				Op::Comparator(c) => Ok(RolledOp::Comparator(c.clone())),
+				Op::Logic(l) => Ok(RolledOp::Logic(l.clone())),
 				_ => unreachable!(),
 			})
 			.ok_op()?;

@@ -22,14 +22,22 @@ pub trait Parse: Sized + Clone + Debug + Display {
 /// Tokenize a string into a module.
 pub fn tokenize<T: Parse>(input: &str) -> Result<T, TokenizerError> {
 	use nom::Finish;
-	T::parse(input)
+	let (remainder, res) = T::parse(input)
 		.finish()
-		.map(|(_, m)| m)
-		.map_err(|e| TokenizerError(format!("{}", e)))
+		.map_err(|e| TokenizerError(format!("{}", e)))?;
+
+	if remainder.len() > 0 {
+		Err(TokenizerError(format!(
+			"Incomplete input! Could not parse: \"{}\"",
+			remainder
+		)))
+	} else {
+		Ok(res)
+	}
 }
 
 #[derive(Clone, Debug)]
-pub struct TokenizerError(String);
+pub struct TokenizerError(pub String);
 
 impl Display for TokenizerError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

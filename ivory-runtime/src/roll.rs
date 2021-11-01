@@ -9,7 +9,10 @@ use crate::{
 	value::Value,
 	Result,
 };
-use ivory_tokenizer::expression::dice_ops::{DiceCmp, DiceOp, DiceOpCmp};
+use ivory_tokenizer::expression::{
+	dice_ops::{DiceOp, DiceOpCmp},
+	logic::Comparator,
+};
 use rand::Rng;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -139,12 +142,12 @@ impl Display for Roll {
 	}
 }
 
-fn do_cmp(a: u32, cmp: &DiceCmp, b: u32) -> bool {
+fn do_cmp(a: u32, cmp: &Comparator, b: u32) -> bool {
 	match cmp {
-		DiceCmp::Gt => a > b,
-		DiceCmp::Lt => a < b,
-		DiceCmp::Eq => a == b,
-		DiceCmp::GtEq => a >= b,
-		DiceCmp::LtEq => a <= b,
+		Comparator::Gt => a > b,
+		Comparator::Lt => a < b,
+		Comparator::Eq => a == b,
+		Comparator::GtEq => a >= b,
+		Comparator::LtEq => a <= b,
 	}
 }

@@ -48,12 +48,22 @@ ivory ~ str_mod + 5
 3 + 5 = 8
 ```
 
+There's also support for a ternary operator, allowing for logic and branching.
+
+```
+5 > 3 ? "five is bigger than three" : "five is less than three" = "five is bigger than three"
+
+5 < 3 ? "five is bigger than three" : "five is less than three" = "five is less than three"
+```
+
+Altogether, it allows for some pretty complex rolls.
+
 
 ## Stateless and Functionial
 
 Ivory is *stateless*, meaning values cannot change, and *functional*, meaning functions act like functions in math: they take inputs, give back an output, and don't do anything else. An example of a functional language is [Haskell](https://www.haskell.org/).
 
-This choice is limiting by design- Ivory is stateless because physical character sheets are also stateless. When you change your character on a physical sheet, you do it by writing on the sheet. Similarly, when you change your character in Ivory, you do it by editing the file. With no need to store floating, possibly mutated info about your character, you have a guarantee that what's in your character file is the start and end of what data your character is made of.
+This choice is limiting by design- Ivory is stateless because dice rolls on physical character sheets are also stateless. When you change your character on a physical sheet, you do it by writing on the sheet. Similarly, when you change your character in Ivory, you do it by editing the file. With no need to store floating, possibly mutated info about your character, you have a guarantee that what's in your character file is the start and end of what data your character is made of.
 
 Characters are living things, and change over time as they level up and progress. Stateless Ivory makes it easy to track these changes through source control like git. Every time you level up, or gain an item, or finish a session, you can commit the changes your character has undergone.
 
