@@ -5,6 +5,7 @@ use std::{
 
 use crate::{
 	error::RuntimeError,
+	mod_loader::ModLoader,
 	runtime::{Runtime, RuntimeContext},
 	value::Value,
 	Result,
@@ -42,7 +43,10 @@ impl SingleRoll {
 		}
 	}
 
-	pub fn new_rolled<R: Rng>(runtime: &Runtime<R>, sides: u32) -> Self {
+	pub fn new_rolled<R: Rng, L: ModLoader>(
+		runtime: &Runtime<R, L>,
+		sides: u32,
+	) -> Self {
 		let mut s = Self::new(sides, 0);
 		s.roll(runtime);
 		s
@@ -52,14 +56,14 @@ impl SingleRoll {
 		self.val + self.explodes.iter().fold(0, |sum, v| sum + v)
 	}
 
-	pub fn roll<R: Rng>(&mut self, runtime: &Runtime<R>) {
+	pub fn roll<R: Rng, L: ModLoader>(&mut self, runtime: &Runtime<R, L>) {
 		let mut rng = runtime.rng();
 		self.val = rng.gen_range(1..=self.sides);
 	}
 
-	pub fn apply_op<R: Rng>(
+	pub fn apply_op<R: Rng, L: ModLoader>(
 		&mut self,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		op: &DiceOp,
 		rhs: &Value,
 	) -> Result<()> {
@@ -93,8 +97,8 @@ impl SingleRoll {
 }
 
 impl Roll {
-	pub fn create<R: Rng>(
-		runtime: &Runtime<R>,
+	pub fn create<R: Rng, L: ModLoader>(
+		runtime: &Runtime<R, L>,
 		count: &Value,
 		sides: &Value,
 	) -> Result<Self> {
@@ -113,9 +117,9 @@ impl Roll {
 		})
 	}
 
-	pub fn apply_op<R: Rng>(
+	pub fn apply_op<R: Rng, L: ModLoader>(
 		&mut self,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		op: &DiceOp,
 		rhs: &Value,
 	) -> Result<()> {

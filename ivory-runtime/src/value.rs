@@ -17,6 +17,7 @@ use rand::Rng;
 use crate::{
 	error::RuntimeError,
 	expr::RolledOp,
+	mod_loader::ModLoader,
 	roll::Roll,
 	runtime::{Runtime, RuntimeContext},
 };
@@ -116,11 +117,11 @@ impl Value {
 		}
 	}
 
-	pub fn run_op<R: Rng>(
+	pub fn run_op<R: Rng, L: ModLoader>(
 		&self,
 		rhs: &Value,
 		op: &RolledOp,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		use Value::*;
@@ -361,9 +362,9 @@ impl Value {
 		}
 	}
 
-	pub fn from_token<R: Rng>(
+	pub fn from_token<R: Rng, L: ModLoader>(
 		token: &ivory_tokenizer::values::Value,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Self> {
 		Ok(match token {
@@ -428,21 +429,21 @@ fn same_op_err(kind: ValueKind, op: &RolledOp) -> Result<Value> {
 }
 
 trait RunOp {
-	fn op<R: Rng>(
+	fn op<R: Rng, L: ModLoader>(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Value>;
 }
 
 impl RunOp for bool {
-	fn op<R: Rng>(
+	fn op<R: Rng, L: ModLoader>(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -456,11 +457,11 @@ impl RunOp for bool {
 }
 
 impl RunOp for i32 {
-	fn op<R: Rng>(
+	fn op<R: Rng, L: ModLoader>(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -492,11 +493,11 @@ impl RunOp for i32 {
 }
 
 impl RunOp for f32 {
-	fn op<R: Rng>(
+	fn op<R: Rng, L: ModLoader>(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -529,11 +530,11 @@ impl RunOp for f32 {
 }
 
 impl RunOp for String {
-	fn op<R: Rng>(
+	fn op<R: Rng, L: ModLoader>(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -547,11 +548,11 @@ impl RunOp for String {
 }
 
 impl RunOp for Vec<Value> {
-	fn op<R: Rng>(
+	fn op<R: Rng, L: ModLoader>(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -672,7 +673,7 @@ impl<'a> ValueRef<'a> {
 fn auto_converting_ops() {
 	use rand::thread_rng;
 
-	let runtime = Runtime::new(thread_rng());
+	let runtime = Runtime::new(thread_rng(), ());
 	let ctx = RuntimeContext::new();
 	assert_eq!(
 		Value::Integer(10)

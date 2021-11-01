@@ -1,4 +1,4 @@
-use crate::{Result, RuntimeError};
+use crate::{error::RuntimeError, Result};
 use ivory_tokenizer::{tokenize, Module};
 
 pub trait ModLoader {
@@ -6,12 +6,10 @@ pub trait ModLoader {
 	fn load(&mut self, url: &str) -> std::result::Result<Module, Self::Error>;
 }
 
-/// Mod loader where the URL is the raw text of the file, not an actual URL
-pub struct RawLoader;
-
-impl ModLoader for RawLoader {
+impl ModLoader for () {
 	type Error = RuntimeError;
-	fn load(&mut self, url: &str) -> Result<Module> {
-		Ok(tokenize(url)?)
+
+	fn load(&mut self, _: &str) -> std::result::Result<Module, Self::Error> {
+		Err(RuntimeError::NoModLoaderSpecified)
 	}
 }

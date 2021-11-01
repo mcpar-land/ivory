@@ -95,7 +95,7 @@ fn main() {
 	let run = matches.value_of("RUN");
 	let debug = matches.is_present("DEBUG");
 
-	let mut runtime = Runtime::new(rand::thread_rng());
+	let mut runtime = Runtime::new(rand::thread_rng(), ());
 	let mut loader = FileLoader { current_file: None };
 
 	if let Some(file) = file {

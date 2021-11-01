@@ -31,19 +31,21 @@ type Component = ExpressionComponent<RolledOp, Value>;
 
 pub type RolledExpression = prec::Expression<RolledOp, Component>;
 
-pub struct Runtime<R: Rng> {
+pub struct Runtime<R: Rng, L: ModLoader = ()> {
 	pub values: RuntimeValues,
 	pub rng: RefCell<R>,
 	pub climber: Climber<
 		R,
+		L,
 		RolledOp,
 		ExpressionComponent<RolledOp, Value>,
 		Value,
 		RuntimeError,
 	>,
+	pub mod_loader: L,
 }
 
-impl<R: Rng> Runtime<R> {
+impl<R: Rng, L: ModLoader> Runtime<R, L> {
 	fn prec_handler(
 		lhs: Component,
 		op: RolledOp,
@@ -58,7 +60,7 @@ impl<R: Rng> Runtime<R> {
 		))
 	}
 
-	pub fn new(rng: R) -> Self {
+	pub fn new(rng: R, mod_loader: L) -> Self {
 		let climber = Climber::new(
 			|op, _, _| match op {
 				RolledOp::Ternary(_) => (0, Assoc::Right),
@@ -78,6 +80,7 @@ impl<R: Rng> Runtime<R> {
 			},
 			rng: RefCell::new(rng),
 			climber,
+			mod_loader,
 		}
 	}
 	pub fn rng(&self) -> RefMut<R> {
@@ -314,13 +317,12 @@ impl RuntimeContext {
 
 #[cfg(test)]
 mod test {
-	use crate::mod_loader::RawLoader;
 
 	use super::*;
 	use ivory_tokenizer::Parse;
 
 	fn test_runtime() -> (Runtime<impl Rng>, RuntimeContext) {
-		(Runtime::new(rand::thread_rng()), RuntimeContext::new())
+		(Runtime::new(rand::thread_rng(), ()), RuntimeContext::new())
 	}
 
 	#[test]
@@ -339,7 +341,7 @@ mod test {
 
 	#[test]
 	fn load_module() {
-		let mut runtime = Runtime::new(rand::thread_rng());
+		let mut runtime = Runtime::new(rand::thread_rng(), ());
 		runtime
 			.load(
 				r#"

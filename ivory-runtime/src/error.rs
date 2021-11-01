@@ -47,5 +47,8 @@ quick_error! {
 		FieldNotOnStruct(struct_name: String, field_name: String) {
 			display(s) -> ("Field {} not present on struct {}", field_name, struct_name)
 		}
+		NoModLoaderSpecified {
+			display(s) -> ("This runtime doesn't have a specified module loader.")
+		}
 	}
 }

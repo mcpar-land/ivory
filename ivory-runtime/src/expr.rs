@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use crate::mod_loader::ModLoader;
 use crate::prec;
 use ivory_expression::{Expression, ExpressionComponent, Pair};
 
@@ -50,9 +51,9 @@ pub fn into_prec(expr: Expression<RolledOp, Value>) -> RolledExpression {
 }
 
 impl prec::Token<Value, RuntimeError> for Component {
-	fn convert<R: Rng>(
+	fn convert<R: Rng, L: ModLoader>(
 		self,
-		runtime: &Runtime<R>,
+		runtime: &Runtime<R, L>,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		Ok(match self {
