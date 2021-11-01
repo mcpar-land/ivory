@@ -32,6 +32,7 @@ jobs:
           asset_path: ./target/debug/ivory-repl.exe
           asset_name: ivory_windows-nightly-$$.exe
           asset_content_type: application/octet-stream
+          max_releases: 1
       - name: Deploy Linux release
         if: matrix.os == 'ubuntu-latest'
         uses: WebFreak001/deploy-nightly@v1.1.0
@@ -43,6 +44,7 @@ jobs:
           asset_path: ./target/debug/ivory-repl
           asset_name: ivory_ubuntu-nightly-$$
           asset_content_type: application/octet-stream
+          max_releases: 1
       - name: Deploy Mac OS release
         if: matrix.os == 'macOS-latest'
         uses: WebFreak001/deploy-nightly@v1.1.0
@@ -54,5 +56,6 @@ jobs:
           asset_path: ./target/debug/ivory-repl
           asset_name: ivory_macOS-nightly-$$
           asset_content_type: application/octet-stream
+          max_releases: 1
         
           
