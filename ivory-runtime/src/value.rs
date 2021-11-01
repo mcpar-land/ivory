@@ -2,8 +2,7 @@ use colored::*;
 use ivory_tokenizer::{
 	expression::{
 		logic::{Comparator, LogicOp},
-		math::{ExprOpMath, ExprOpMathKind, ExprOpMathRound},
-		Op,
+		math::{ExprOpMathKind, ExprOpMathRound},
 	},
 	itype::Type,
 	values::{
@@ -23,7 +22,7 @@ use crate::{
 };
 use crate::{struct_value::StructValue, Result};
 
-use std::{collections::HashMap, convert::TryInto, fmt::Display};
+use std::{collections::HashMap, fmt::Display};
 
 static K_INTEGER: &'static str = "int";
 static K_DECIMAL: &'static str = "decimal";
@@ -168,6 +167,8 @@ impl Value {
 					(a.value() as i32).op(&(b.value() as i32), op, runtime, ctx)
 				}
 				(Array(a), Array(b)) => a.op(b, op, runtime, ctx),
+				(Array(a), b) => append(op, a, b),
+				(a, Array(b)) => prepend(op, a, b),
 				(a, b) => {
 					Err(RuntimeError::CannotRunOp(a.kind(), op.clone(), b.kind()))
 				}
@@ -426,6 +427,42 @@ impl PartialEq for Value {
 
 fn same_op_err(kind: ValueKind, op: &RolledOp) -> Result<Value> {
 	Err(RuntimeError::CannotRunOp(kind, op.clone(), kind))
+}
+
+fn append(op: &RolledOp, a: &Vec<Value>, b: &Value) -> Result<Value> {
+	if let RolledOp::Math {
+		kind: ExprOpMathKind::Add,
+		..
+	} = op
+	{
+		let mut a = a.clone();
+		a.push(b.clone());
+		Ok(Value::Array(a))
+	} else {
+		Err(RuntimeError::CannotRunOp(
+			ValueKind::Array,
+			op.clone(),
+			b.kind(),
+		))
+	}
+}
+
+fn prepend(op: &RolledOp, a: &Value, b: &Vec<Value>) -> Result<Value> {
+	if let RolledOp::Math {
+		kind: ExprOpMathKind::Add,
+		..
+	} = op
+	{
+		let mut b = b.clone();
+		b.insert(0, a.clone());
+		Ok(Value::Array(b))
+	} else {
+		Err(RuntimeError::CannotRunOp(
+			a.kind(),
+			op.clone(),
+			ValueKind::Array,
+		))
+	}
 }
 
 trait RunOp {

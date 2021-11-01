@@ -46,7 +46,8 @@ impl App {
 				Ok(line) => {
 					rl.add_history_entry(&line);
 					if let Err(err) = self.run(&line) {
-						println!("{}", err);
+						let err_str = format!("{}", err).red();
+						println!("{}\n", err_str);
 					} else {
 						println!("");
 					}

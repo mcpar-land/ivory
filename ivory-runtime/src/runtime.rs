@@ -130,7 +130,7 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 					.variables
 					.get(&var.0)
 					.ok_or_else(|| RuntimeError::VariableNotFound(var.0.clone()))?;
-				self.valueify(ctx, &val.value)?
+				self.valueify(&RuntimeContext::new(), &val.value)?
 			}
 		};
 		for component in components {
@@ -374,5 +374,24 @@ mod test {
 		);
 		println!("{}", runtime.run("1d20").unwrap());
 		println!("{}", runtime.run("1d square(5)").unwrap());
+	}
+
+	#[test]
+	fn respect_variable_scope() {
+		let mut runtime = Runtime::new(rand::thread_rng(), ());
+		runtime
+			.load(
+				r#"
+		a = 10;
+		b = param -> param + 20 + c;
+		c = param + 5;
+		d = param -> param + 20;
+		"#,
+			)
+			.unwrap();
+		assert!(runtime.run("a").is_ok());
+		assert!(runtime.run("c").is_err());
+		assert!(runtime.run("b(3)").is_err());
+		assert!(runtime.run("d(3)").is_ok());
 	}
 }
