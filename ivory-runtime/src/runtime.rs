@@ -123,11 +123,16 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 		Accessor(var, components): &Accessor,
 	) -> Result<Expression<Op, Value>> {
 		let mut expr = match var {
-			AccessorRoot::Variable(variable) => ctx
-				.params
-				.get(&variable.0)
-				.ok_or_else(|| RuntimeError::VariableNotFound(variable.0.clone()))?
-				.clone(),
+			AccessorRoot::Variable(variable) => match ctx.params.get(&variable.0) {
+				Some(param) => param.clone(),
+				None => {
+					let val =
+						self.values.variables.get(&variable.0).ok_or_else(|| {
+							RuntimeError::VariableNotFound(variable.0.clone())
+						})?;
+					self.valueify(&RuntimeContext::new(), &val.value)?
+				}
+			},
 			AccessorRoot::Value(value) => {
 				Expression::<Op, _>::new(Value::from_token(value, self, ctx)?)
 			}
@@ -396,9 +401,10 @@ mod test {
 		"#,
 			)
 			.unwrap();
-		assert!(runtime.run("a").is_ok());
+		println!("{:#?}", runtime.values.variables);
+		runtime.run("a").unwrap();
 		assert!(runtime.run("c").is_err());
 		assert!(runtime.run("b(3)").is_err());
-		assert!(runtime.run("d(3)").is_ok());
+		runtime.run("d(3)").unwrap();
 	}
 }

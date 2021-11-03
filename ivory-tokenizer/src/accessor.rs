@@ -29,8 +29,8 @@ pub struct Accessor(pub AccessorRoot, pub Vec<AccessorComponent>);
 impl Parse for Accessor {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		let first = alt((
-			map(VariableName::parse, |v| AccessorRoot::Variable(v)),
 			map(Value::parse, |v| AccessorRoot::Value(v)),
+			map(VariableName::parse, |v| AccessorRoot::Variable(v)),
 		));
 
 		let afters = many0(preceded(multispace0, AccessorComponent::parse));

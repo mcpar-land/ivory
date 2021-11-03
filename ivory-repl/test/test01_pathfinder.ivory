@@ -23,3 +23,8 @@ con_check = ability_check(con);
 int_check = ability_check(int);
 wis_check = ability_check(wis);
 cha_check = ability_check(cha);
+
+items = [
+	{ name: "Ring of Something", desc: "A ring that does something" },
+	{ name: "Sword of Something", desc: "A ring that does something" }
+];
