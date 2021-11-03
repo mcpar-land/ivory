@@ -24,10 +24,7 @@ pub fn upper_camel_case(input: &str) -> IResult<&str, &str> {
 }
 
 pub fn variable_name(input: &str) -> IResult<&str, &str> {
-	recognize(pair(
-		alt((alpha1, tag("_"))),
-		many0(alt((alphanumeric1, tag("_")))),
-	))(input)
+	recognize(pair(alpha1, many0(alt((alphanumeric1, tag("_"))))))(input)
 }
 
 pub fn test_multiple<'a, T: Parse>(inputs: &[&'a str]) {
