@@ -4,6 +4,7 @@ use crate::{
 	prec::{self, Token},
 	prec::{Assoc, Climber},
 	roll::Roll,
+	std_fns::StdFnLibrary,
 	value::Value,
 	Result, RuntimeError,
 };
@@ -43,6 +44,7 @@ pub struct Runtime<R: Rng, L: ModLoader = ()> {
 		RuntimeError,
 	>,
 	pub mod_loader: L,
+	pub std_fns: StdFnLibrary<R, L>,
 }
 
 impl<R: Rng, L: ModLoader> Runtime<R, L> {
@@ -81,6 +83,7 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 			rng: RefCell::new(rng),
 			climber,
 			mod_loader,
+			std_fns: StdFnLibrary::new(),
 		}
 	}
 	pub fn rng(&self) -> RefMut<R> {
@@ -137,18 +140,17 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 				Expression::<Op, _>::new(Value::from_token(value, self, ctx)?)
 			}
 		};
-		// let mut expr = match ctx.params.get(&var.0) {
-		// 	Some(param) => param.clone(),
-		// 	None => {
-		// 		let val = self
-		// 			.values
-		// 			.variables
-		// 			.get(&var.0)
-		// 			.ok_or_else(|| RuntimeError::VariableNotFound(var.0.clone()))?;
-		// 		self.valueify(&RuntimeContext::new(), &val.value)?
-		// 	}
-		// };
+		let mut std_fn_call: Option<String> = None;
 		for component in components {
+			// make sure that a call always comes right after a std function name
+			if std_fn_call.is_some()
+				&& !matches!(component, AccessorComponent::Call(_))
+			{
+				return Err(RuntimeError::BadStdFnCall(format!(
+					"{} is a standard function, not a value, and must be called",
+					std_fn_call.unwrap()
+				)));
+			}
 			let previous_value = self.val_expr_collapse(ctx, &expr)?;
 			match component {
 				AccessorComponent::Property(prop) => {
@@ -159,10 +161,15 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 							return Err(RuntimeError::PropNotFound(prop.0.clone()));
 						}
 					} else {
-						return Err(RuntimeError::NoPropertyOnKind(
-							previous_value.kind(),
-							prop.0.clone(),
-						));
+						// object props override std function names.
+						if self.std_fns.has(&prop.0) {
+							std_fn_call = Some(prop.0.clone());
+						} else {
+							return Err(RuntimeError::NoPropertyOnKind(
+								previous_value.kind(),
+								prop.0.clone(),
+							));
+						}
 					}
 				}
 				AccessorComponent::Index(i) => {
@@ -170,23 +177,41 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 						Expression::new(previous_value.index(&self.evaluate(ctx, i)?)?);
 				}
 				AccessorComponent::Call(call) => {
-					if let Value::Function(FunctionValue {
-						args,
-						expr: fn_expr,
-					}) = &previous_value
-					{
-						let mut new_ctx = RuntimeContext::new();
-						for (var, expr) in args.iter().zip(call.iter()) {
-							new_ctx
-								.params
-								.insert(var.0.clone(), self.valueify(ctx, expr)?);
-						}
-						expr = self.valueify(&new_ctx, fn_expr)?;
+					if let Some(fn_name) = &std_fn_call {
+						let std_call_res = self.std_fns.call(
+							&self,
+							ctx,
+							call,
+							fn_name.as_str(),
+							&previous_value,
+						)?;
+						expr = Expression::new(std_call_res);
+						std_fn_call = None;
 					} else {
-						return Err(RuntimeError::CannotCallKind(previous_value.kind()));
+						if let Value::Function(FunctionValue {
+							args,
+							expr: fn_expr,
+						}) = &previous_value
+						{
+							let mut new_ctx = RuntimeContext::new();
+							for (var, expr) in args.iter().zip(call.iter()) {
+								new_ctx
+									.params
+									.insert(var.0.clone(), self.valueify(ctx, expr)?);
+							}
+							expr = self.valueify(&new_ctx, fn_expr)?;
+						} else {
+							return Err(RuntimeError::CannotCallKind(previous_value.kind()));
+						}
 					}
 				}
 			}
+		}
+		if let Some(uncalled_std_fn_name) = std_fn_call {
+			return Err(RuntimeError::BadStdFnCall(format!(
+				"{} is a standard function, not a value, and must be called",
+				uncalled_std_fn_name
+			)));
 		}
 		Ok(expr.un_nest())
 	}
@@ -407,5 +432,22 @@ mod test {
 		assert!(runtime.run("c").is_err());
 		assert!(runtime.run("b(3)").is_err());
 		runtime.run("d(3)").unwrap();
+	}
+
+	#[test]
+	fn std_functions() {
+		let mut runtime = Runtime::new(rand::thread_rng(), ());
+		runtime
+			.load(
+				r#"
+			x = [10, 20, 30, 40, 50, 60];
+			y = 5;
+			"#,
+			)
+			.unwrap();
+		println!("{}", runtime.run("x.index_of(40)").unwrap());
+		assert!(runtime.run("y.index_of(4)").is_err());
+		assert!(runtime.run("x.index_of").is_err());
+		assert!(runtime.run("x.index_of[200]").is_err());
 	}
 }

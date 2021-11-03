@@ -50,5 +50,11 @@ quick_error! {
 		NoModLoaderSpecified {
 			display(s) -> ("This runtime doesn't have a specified module loader.")
 		}
+		NoStdFnForKind(fn_name: String, kind: ValueKind) {
+			display(s) -> ("No standard function {} for kind \"{}\"", fn_name, kind)
+		}
+		BadStdFnCall(info: String) {
+			display(s) -> ("{}", info)
+		}
 	}
 }
