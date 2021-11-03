@@ -100,7 +100,9 @@ impl Display for AccessorComponent {
 		match self {
 			AccessorComponent::Property(p) => write!(f, ".{}", p),
 			AccessorComponent::Index(i) => write!(f, "[{}]", i),
-			AccessorComponent::Call(c) => write!(f, "{}", comma_separated_display(c)),
+			AccessorComponent::Call(c) => {
+				write!(f, "({})", comma_separated_display(c))
+			}
 		}
 	}
 }

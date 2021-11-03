@@ -1,4 +1,5 @@
 use colored::*;
+use hint::RuntimeHinter;
 use std::{
 	convert::TryInto,
 	fs::File,
@@ -20,12 +21,12 @@ use ivory_runtime::{
 };
 use rand::prelude::ThreadRng;
 use rustyline::{error::ReadlineError, Editor};
-struct App {
-	runtime: Runtime<ThreadRng>,
+struct App<'a> {
+	runtime: &'a Runtime<ThreadRng>,
 	loader: FileLoader,
 }
 
-impl App {
+impl<'a> App<'a> {
 	fn run(&mut self, cmd: &str) -> Result<(), ReplError> {
 		let res_eq = self.runtime.run(cmd)?.un_nest();
 		let res_eq_str = format!("{}", res_eq);
@@ -36,7 +37,8 @@ impl App {
 	}
 
 	fn run_loop(&mut self) {
-		let mut rl = Editor::<()>::new();
+		let mut rl = Editor::<RuntimeHinter<ThreadRng, ()>>::new();
+		rl.set_helper(Some(RuntimeHinter(self.runtime)));
 		loop {
 			let zinger = self
 				.loader
@@ -113,7 +115,10 @@ fn main() {
 			.expect("Unable to load file");
 	}
 
-	let mut app = App { runtime, loader };
+	let mut app = App {
+		runtime: &runtime,
+		loader,
+	};
 	if let Some(run) = run {
 		app.run(run).expect("error running expression");
 	} else {

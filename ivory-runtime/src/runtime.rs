@@ -310,6 +310,7 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 }
 
 pub struct RuntimeValues {
+	// TODO: look into making these into radix trees instead
 	pub structs: BTreeMap<String, StructDefinition>,
 	pub variables: BTreeMap<String, Variable>,
 }

@@ -9,6 +9,7 @@ edition = "2018"
 clap = "2.33.3"
 colored = "2.0"
 rustyline = "9.0.0"
+rustyline-derive = "0.5.0"
 rand = "0.8.4"
 quick-error = "2.0.1"
 ivory-runtime = { path = "../ivory-runtime" }
