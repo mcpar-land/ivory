@@ -120,6 +120,11 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 		Ok(self.execute(&RuntimeContext::new(), &ex)?)
 	}
 
+	pub fn run_val(&self, cmd: &str) -> Result<Value> {
+		let res = self.run(cmd)?;
+		self.math_to_value(res, &RuntimeContext::new())
+	}
+
 	pub fn access(
 		&self,
 		ctx: &RuntimeContext,
@@ -140,6 +145,9 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 				Expression::<Op, _>::new(Value::from_token(value, self, ctx)?)
 			}
 		};
+		// This is a check that is set to something when the accessor is:
+		// a variable that is not found on the parent value
+		// is the name of a standard function
 		let mut std_fn_call: Option<String> = None;
 		for component in components {
 			// make sure that a call always comes right after a std function name
@@ -158,7 +166,11 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 						if let Some(p) = obj.get(&prop.0) {
 							expr = Expression::new(p.clone());
 						} else {
-							return Err(RuntimeError::PropNotFound(prop.0.clone()));
+							if self.std_fns.has(&prop.0) {
+								std_fn_call = Some(prop.0.clone());
+							} else {
+								return Err(RuntimeError::PropNotFound(prop.0.clone()));
+							}
 						}
 					} else {
 						// object props override std function names.
