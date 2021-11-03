@@ -290,6 +290,14 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 			self
 		}
 	}
+	pub fn to_token_or_paren(self) -> ExpressionComponent<O, T> {
+		let e = self.un_nest();
+		if e.pairs.len() > 0 {
+			ExpressionComponent::Paren(Box::new(e))
+		} else {
+			e.first // this cannot be paren, because of un_nest
+		}
+	}
 }
 
 impl<O: Clone, T: Clone, E: Clone> Expression<O, Result<T, E>> {

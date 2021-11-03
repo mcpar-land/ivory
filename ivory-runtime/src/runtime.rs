@@ -9,7 +9,7 @@ use crate::{
 };
 use ivory_expression::{Expression, ExpressionComponent};
 use ivory_tokenizer::{
-	accessor::{Accessor, AccessorComponent},
+	accessor::{Accessor, AccessorComponent, AccessorRoot},
 	expression::{
 		math::{ExprOpMath, ExprOpMathKind},
 		ExpressionToken, Op,
@@ -122,17 +122,27 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 		ctx: &RuntimeContext,
 		Accessor(var, components): &Accessor,
 	) -> Result<Expression<Op, Value>> {
-		let mut expr = match ctx.params.get(&var.0) {
-			Some(param) => param.clone(),
-			None => {
-				let val = self
-					.values
-					.variables
-					.get(&var.0)
-					.ok_or_else(|| RuntimeError::VariableNotFound(var.0.clone()))?;
-				self.valueify(&RuntimeContext::new(), &val.value)?
+		let mut expr = match var {
+			AccessorRoot::Variable(variable) => ctx
+				.params
+				.get(&variable.0)
+				.ok_or_else(|| RuntimeError::VariableNotFound(variable.0.clone()))?
+				.clone(),
+			AccessorRoot::Value(value) => {
+				Expression::<Op, _>::new(Value::from_token(value, self, ctx)?)
 			}
 		};
+		// let mut expr = match ctx.params.get(&var.0) {
+		// 	Some(param) => param.clone(),
+		// 	None => {
+		// 		let val = self
+		// 			.values
+		// 			.variables
+		// 			.get(&var.0)
+		// 			.ok_or_else(|| RuntimeError::VariableNotFound(var.0.clone()))?;
+		// 		self.valueify(&RuntimeContext::new(), &val.value)?
+		// 	}
+		// };
 		for component in components {
 			let previous_value = self.val_expr_collapse(ctx, &expr)?;
 			match component {
@@ -197,14 +207,11 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 		ctx: &RuntimeContext,
 		expr: &Expression<Op, ExpressionToken>,
 	) -> Result<Expression<Op, Value>> {
-		expr.try_map_tokens_components(|token| match token {
-			ExpressionToken::Value(val) => Ok(ExpressionComponent::Token(
-				Value::from_token(val, &self, ctx)?,
-			)),
-			ExpressionToken::Accessor(accessor) => Ok(ExpressionComponent::Paren(
-				Box::new(self.access(ctx, accessor)?),
-			)),
-		})
+		expr.try_map_tokens_components::<Value, _, RuntimeError>(
+			|ExpressionToken(accessor)| {
+				Ok(self.access(ctx, accessor)?.to_token_or_paren())
+			},
+		)
 	}
 
 	pub fn roll(

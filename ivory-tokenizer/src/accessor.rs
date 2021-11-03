@@ -12,16 +12,26 @@ use nom::{
 use crate::{
 	expression::{ExpressionToken, Op},
 	util::comma_separated_display,
+	values::Value,
 	variable::VariableName,
 	Parse,
 };
 
 #[derive(Clone, Debug)]
-pub struct Accessor(pub VariableName, pub Vec<AccessorComponent>);
+pub enum AccessorRoot {
+	Variable(VariableName),
+	Value(Value),
+}
+
+#[derive(Clone, Debug)]
+pub struct Accessor(pub AccessorRoot, pub Vec<AccessorComponent>);
 
 impl Parse for Accessor {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		let first = VariableName::parse;
+		let first = alt((
+			map(VariableName::parse, |v| AccessorRoot::Variable(v)),
+			map(Value::parse, |v| AccessorRoot::Value(v)),
+		));
 
 		let afters = many0(preceded(multispace0, AccessorComponent::parse));
 
@@ -36,7 +46,10 @@ impl Display for Accessor {
 		write!(
 			f,
 			"{}{}",
-			self.0,
+			match &self.0 {
+				AccessorRoot::Variable(v) => format!("{}", v),
+				AccessorRoot::Value(v) => format!("{}", v),
+			},
 			self
 				.1
 				.iter()

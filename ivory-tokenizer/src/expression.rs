@@ -96,35 +96,17 @@ impl Display for Op {
 }
 
 #[derive(Clone, Debug)]
-pub enum ExpressionToken {
-	Value(Value),
-	Accessor(Accessor),
-}
-
-impl ExpressionToken {
-	pub fn is_accessor(&self) -> bool {
-		match self {
-			Self::Accessor(_) => true,
-			_ => false,
-		}
-	}
-}
+pub struct ExpressionToken(pub Accessor);
 
 impl Parse for ExpressionToken {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		alt((
-			map(Value::parse, |r| Self::Value(r)),
-			map(Accessor::parse, |r| Self::Accessor(r)),
-		))(input)
+		map(Accessor::parse, |r| Self(r))(input)
 	}
 }
 
 impl Display for ExpressionToken {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			ExpressionToken::Value(v) => write!(f, "{}", v),
-			ExpressionToken::Accessor(a) => write!(f, "{}", a),
-		}
+		write!(f, "{}", self.0)
 	}
 }
 
