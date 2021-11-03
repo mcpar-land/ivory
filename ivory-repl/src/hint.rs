@@ -5,9 +5,9 @@ use rustyline::hint::{Hint, Hinter};
 use rustyline_derive::{Completer, Helper, Highlighter, Validator};
 
 #[derive(Helper, Completer, Highlighter, Validator)]
-pub struct RuntimeHinter<'a, R: Rng, L: ModLoader>(pub &'a Runtime<R, L>);
+pub struct RuntimeHinter<'a>(pub &'a Runtime);
 
-impl<'a, R: Rng, L: ModLoader> Hinter for RuntimeHinter<'a, R, L> {
+impl<'a> Hinter for RuntimeHinter<'a> {
 	type Hint = AppHint;
 
 	fn hint(

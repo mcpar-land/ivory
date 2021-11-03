@@ -14,20 +14,20 @@ use crate::{
 	Result, RuntimeError,
 };
 
-type StdFn<R, L> = fn(
-	runtime: &Runtime<R, L>,
+type StdFn = fn(
+	runtime: &Runtime,
 	ctx: &RuntimeContext,
 	args: &Vec<Expression<Op, ExpressionToken>>,
 	val: &Value,
 ) -> Result<Value>;
 
-pub struct StdFnLibrary<R: Rng, L: ModLoader> {
-	pub fns: HashMap<String, StdFn<R, L>>,
+pub struct StdFnLibrary {
+	pub fns: HashMap<String, StdFn>,
 }
 
-impl<R: Rng, L: ModLoader> StdFnLibrary<R, L> {
+impl StdFnLibrary {
 	pub fn new() -> Self {
-		let mut fns = HashMap::<String, StdFn<R, L>>::new();
+		let mut fns = HashMap::<String, StdFn>::new();
 
 		fns.insert("index_of".to_string(), index_of);
 		fns.insert("len".to_string(), len);
@@ -37,7 +37,7 @@ impl<R: Rng, L: ModLoader> StdFnLibrary<R, L> {
 
 	pub fn call(
 		&self,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 		args: &Vec<Expression<Op, ExpressionToken>>,
 		name: &str,
@@ -67,8 +67,8 @@ fn no_fn_err(name: &str, val: &Value) -> RuntimeError {
 	RuntimeError::NoStdFnForKind(name.to_string(), val.kind())
 }
 
-fn get_arg<R: Rng, L: ModLoader>(
-	runtime: &Runtime<R, L>,
+fn get_arg(
+	runtime: &Runtime,
 	ctx: &RuntimeContext,
 	args: &Vec<Expression<Op, ExpressionToken>>,
 	i: usize,
@@ -99,8 +99,8 @@ fn enforce_len(
 
 // ========================================================================== //
 
-pub fn index_of<R: Rng, L: ModLoader>(
-	runtime: &Runtime<R, L>,
+pub fn index_of(
+	runtime: &Runtime,
 	ctx: &RuntimeContext,
 	args: &Vec<Expression<Op, ExpressionToken>>,
 	val: &Value,
@@ -119,8 +119,8 @@ pub fn index_of<R: Rng, L: ModLoader>(
 	}
 }
 
-pub fn len<R: Rng, L: ModLoader>(
-	_: &Runtime<R, L>,
+pub fn len(
+	_: &Runtime,
 	_: &RuntimeContext,
 	args: &Vec<Expression<Op, ExpressionToken>>,
 	val: &Value,
@@ -143,7 +143,7 @@ mod test {
 
 	use super::*;
 
-	fn test_runtime() -> (Runtime<ThreadRng>, RuntimeContext) {
+	fn test_runtime() -> (Runtime, RuntimeContext) {
 		let mut r = Runtime::new(rand::thread_rng(), ());
 		r.load(
 			r#"

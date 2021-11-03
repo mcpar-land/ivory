@@ -19,10 +19,9 @@ use ivory_runtime::{
 	runtime::{Runtime, RuntimeContext},
 	value::Value,
 };
-use rand::prelude::ThreadRng;
 use rustyline::{error::ReadlineError, Editor};
 struct App<'a> {
-	runtime: &'a Runtime<ThreadRng>,
+	runtime: &'a Runtime,
 	loader: FileLoader,
 }
 
@@ -37,7 +36,7 @@ impl<'a> App<'a> {
 	}
 
 	fn run_loop(&mut self) {
-		let mut rl = Editor::<RuntimeHinter<ThreadRng, ()>>::new();
+		let mut rl = Editor::<RuntimeHinter>::new();
 		rl.set_helper(Some(RuntimeHinter(self.runtime)));
 		loop {
 			let zinger = self

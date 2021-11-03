@@ -10,40 +10,26 @@ use crate::{
 };
 
 pub trait Token<Re, Err> {
-	fn convert<R: Rng, L: ModLoader>(
-		self,
-		runtime: &Runtime<R, L>,
-		ctx: &RuntimeContext,
-	) -> Result<Re, Err>;
+	fn convert(self, runtime: &Runtime, ctx: &RuntimeContext) -> Result<Re, Err>;
 }
-pub struct Climber<
-	R: Rng,
-	L: ModLoader,
-	Op,
-	To: Token<Re, Err> + Clone,
-	Re,
-	Err,
-> {
-	pub rules: fn(&Op, &Runtime<R, L>, &RuntimeContext) -> (usize, Assoc),
+pub struct Climber<Op, To: Token<Re, Err> + Clone, Re, Err> {
+	pub rules: fn(&Op, &Runtime, &RuntimeContext) -> (usize, Assoc),
 	/// Function to handle the result of an operator between two tokens.
 	///
 	/// Arguments are:
 	/// - Left-hand side token
 	/// - Operator
 	/// - Right-hand side token
-	pub handler:
-		fn(To, Op, To, &Runtime<R, L>, &RuntimeContext) -> Result<To, Err>,
+	pub handler: fn(To, Op, To, &Runtime, &RuntimeContext) -> Result<To, Err>,
 	p_rule_value: PhantomData<Op>,
 	p_token: PhantomData<To>,
 	p_result: PhantomData<Re>,
 }
 
-impl<R: Rng, L: ModLoader, Op: Clone, To: Token<Re, Err> + Clone, Re, Err>
-	Climber<R, L, Op, To, Re, Err>
-{
+impl<Op: Clone, To: Token<Re, Err> + Clone, Re, Err> Climber<Op, To, Re, Err> {
 	pub fn new(
-		rules: fn(&Op, &Runtime<R, L>, &RuntimeContext) -> (usize, Assoc),
-		handler: fn(To, Op, To, &Runtime<R, L>, &RuntimeContext) -> Result<To, Err>,
+		rules: fn(&Op, &Runtime, &RuntimeContext) -> (usize, Assoc),
+		handler: fn(To, Op, To, &Runtime, &RuntimeContext) -> Result<To, Err>,
 	) -> Self {
 		Self {
 			rules,
@@ -56,7 +42,7 @@ impl<R: Rng, L: ModLoader, Op: Clone, To: Token<Re, Err> + Clone, Re, Err>
 	pub fn process(
 		&self,
 		expr: &Expression<Op, To>,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Re, Err> {
 		let mut primary = expr.first_token.clone().convert(runtime, ctx)?;
@@ -80,7 +66,7 @@ impl<R: Rng, L: ModLoader, Op: Clone, To: Token<Re, Err> + Clone, Re, Err>
 		min_prec: usize,
 		primary: &mut Re,
 		tokens: &mut std::iter::Peekable<std::slice::Iter<(Op, To)>>,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<To, Err> {
 		while let Some((rule, _)) = tokens.peek() {

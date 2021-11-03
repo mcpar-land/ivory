@@ -18,8 +18,8 @@ pub struct StructValue {
 }
 
 impl StructValue {
-	pub fn build<R: Rng>(
-		runtime: &Runtime<R>,
+	pub fn build(
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 		instance: &StructInstance,
 	) -> Result<Self> {

@@ -21,7 +21,7 @@ use ivory_tokenizer::{
 	variable::Variable,
 	Module, Parse,
 };
-use rand::{prelude::StdRng, Rng};
+use rand::{prelude::StdRng, Rng, RngCore};
 use std::{
 	cell::{RefCell, RefMut},
 	collections::BTreeMap,
@@ -32,22 +32,20 @@ type Component = ExpressionComponent<RolledOp, Value>;
 
 pub type RolledExpression = prec::Expression<RolledOp, Component>;
 
-pub struct Runtime<R: Rng, L: ModLoader = ()> {
+pub struct Runtime {
 	pub values: RuntimeValues,
-	pub rng: RefCell<R>,
+	pub rng: RefCell<Box<dyn RngCore>>,
 	pub climber: Climber<
-		R,
-		L,
 		RolledOp,
 		ExpressionComponent<RolledOp, Value>,
 		Value,
 		RuntimeError,
 	>,
-	pub mod_loader: L,
-	pub std_fns: StdFnLibrary<R, L>,
+	pub mod_loader: Box<dyn ModLoader>,
+	pub std_fns: StdFnLibrary,
 }
 
-impl<R: Rng, L: ModLoader> Runtime<R, L> {
+impl Runtime {
 	fn prec_handler(
 		lhs: Component,
 		op: RolledOp,
@@ -62,7 +60,10 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 		))
 	}
 
-	pub fn new(rng: R, mod_loader: L) -> Self {
+	pub fn new<R: 'static + RngCore, L: 'static + ModLoader>(
+		rng: R,
+		mod_loader: L,
+	) -> Self {
 		let climber = Climber::new(
 			|op, _, _| match op {
 				RolledOp::Ternary(_) => (0, Assoc::Right),
@@ -80,13 +81,13 @@ impl<R: Rng, L: ModLoader> Runtime<R, L> {
 				structs: BTreeMap::new(),
 				variables: BTreeMap::new(),
 			},
-			rng: RefCell::new(rng),
+			rng: RefCell::new(Box::new(rng)),
 			climber,
-			mod_loader,
+			mod_loader: Box::new(mod_loader),
 			std_fns: StdFnLibrary::new(),
 		}
 	}
-	pub fn rng(&self) -> RefMut<R> {
+	pub fn rng(&self) -> RefMut<Box<dyn RngCore>> {
 		self.rng.borrow_mut()
 	}
 	pub fn load(&mut self, input: &str) -> Result<()> {
@@ -371,7 +372,7 @@ mod test {
 	use super::*;
 	use ivory_tokenizer::Parse;
 
-	fn test_runtime() -> (Runtime<impl Rng>, RuntimeContext) {
+	fn test_runtime() -> (Runtime, RuntimeContext) {
 		(Runtime::new(rand::thread_rng(), ()), RuntimeContext::new())
 	}
 

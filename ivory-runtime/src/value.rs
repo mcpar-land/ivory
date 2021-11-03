@@ -116,11 +116,11 @@ impl Value {
 		}
 	}
 
-	pub fn run_op<R: Rng, L: ModLoader>(
+	pub fn run_op(
 		&self,
 		rhs: &Value,
 		op: &RolledOp,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		use Value::*;
@@ -366,9 +366,9 @@ impl Value {
 		}
 	}
 
-	pub fn from_token<R: Rng, L: ModLoader>(
+	pub fn from_token(
 		token: &ivory_tokenizer::values::Value,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Self> {
 		Ok(match token {
@@ -470,21 +470,21 @@ fn prepend(op: &RolledOp, a: &Value, b: &Vec<Value>) -> Result<Value> {
 }
 
 trait RunOp {
-	fn op<R: Rng, L: ModLoader>(
+	fn op(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Value>;
 }
 
 impl RunOp for bool {
-	fn op<R: Rng, L: ModLoader>(
+	fn op(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -498,11 +498,11 @@ impl RunOp for bool {
 }
 
 impl RunOp for i32 {
-	fn op<R: Rng, L: ModLoader>(
+	fn op(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -534,11 +534,11 @@ impl RunOp for i32 {
 }
 
 impl RunOp for f32 {
-	fn op<R: Rng, L: ModLoader>(
+	fn op(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -571,11 +571,11 @@ impl RunOp for f32 {
 }
 
 impl RunOp for String {
-	fn op<R: Rng, L: ModLoader>(
+	fn op(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
@@ -589,11 +589,11 @@ impl RunOp for String {
 }
 
 impl RunOp for Vec<Value> {
-	fn op<R: Rng, L: ModLoader>(
+	fn op(
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime<R, L>,
+		runtime: &Runtime,
 		ctx: &RuntimeContext,
 	) -> Result<Value> {
 		match op {

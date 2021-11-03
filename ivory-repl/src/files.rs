@@ -10,9 +10,9 @@ pub struct FileLoader {
 }
 
 impl FileLoader {
-	pub fn load<R: Rng>(
+	pub fn load(
 		&mut self,
-		runtime: &mut Runtime<R>,
+		runtime: &mut Runtime,
 		url: &str,
 	) -> Result<(), ReplError> {
 		let p = PathBuf::from_str(url).expect("Error getting path from string");

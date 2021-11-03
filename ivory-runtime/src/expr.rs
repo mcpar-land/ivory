@@ -51,11 +51,7 @@ pub fn into_prec(expr: Expression<RolledOp, Value>) -> RolledExpression {
 }
 
 impl prec::Token<Value, RuntimeError> for Component {
-	fn convert<R: Rng, L: ModLoader>(
-		self,
-		runtime: &Runtime<R, L>,
-		ctx: &RuntimeContext,
-	) -> Result<Value> {
+	fn convert(self, runtime: &Runtime, ctx: &RuntimeContext) -> Result<Value> {
 		Ok(match self {
 			Self::Paren(expr) => {
 				runtime.climber.process(&into_prec(*expr), runtime, ctx)?
