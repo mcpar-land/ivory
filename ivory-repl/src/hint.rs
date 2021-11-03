@@ -1,6 +1,5 @@
 use colored::*;
-use ivory_runtime::{mod_loader::ModLoader, runtime::Runtime};
-use rand::Rng;
+use ivory_runtime::runtime::Runtime;
 use rustyline::hint::{Hint, Hinter};
 use rustyline_derive::{Completer, Helper, Highlighter, Validator};
 

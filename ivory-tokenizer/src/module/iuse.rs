@@ -6,7 +6,7 @@ use nom::{
 	character::complete::{multispace0, multispace1},
 	combinator::{map, opt, value},
 	multi::separated_list1,
-	sequence::{pair, preceded, separated_pair, terminated, tuple},
+	sequence::{pair, preceded, terminated, tuple},
 };
 
 use crate::{

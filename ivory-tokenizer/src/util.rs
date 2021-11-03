@@ -3,10 +3,10 @@ use std::fmt::Display;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::{alpha1, alphanumeric1, multispace0, one_of},
+	character::complete::{alpha1, alphanumeric1, one_of},
 	combinator::recognize,
 	multi::many0,
-	sequence::{pair, tuple},
+	sequence::pair,
 	IResult,
 };
 

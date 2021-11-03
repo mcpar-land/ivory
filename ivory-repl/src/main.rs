@@ -1,12 +1,6 @@
 use colored::*;
 use hint::RuntimeHinter;
-use std::{
-	convert::TryInto,
-	fs::File,
-	io::Write,
-	path::{Path, PathBuf},
-	process::exit,
-};
+use std::{io::Write, process::exit};
 
 mod error;
 mod files;

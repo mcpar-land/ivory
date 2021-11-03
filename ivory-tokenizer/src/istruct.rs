@@ -1,13 +1,10 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use ivory_expression::Expression;
 use nom::{
 	branch::alt,
-	bytes::complete::{tag, take_while},
-	character::{
-		complete::{alphanumeric0, multispace0, multispace1, one_of},
-		is_alphanumeric,
-	},
+	bytes::complete::tag,
+	character::complete::{alphanumeric0, multispace0, multispace1, one_of},
 	combinator::map,
 	multi::separated_list0,
 	sequence::{delimited, pair, preceded, separated_pair, tuple},
@@ -16,8 +13,6 @@ use nom::{
 use crate::{
 	expression::{ExpressionToken, Op},
 	itype::Type,
-	util::variable_name,
-	values::Value,
 	variable::VariableName,
 	Parse,
 };

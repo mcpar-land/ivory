@@ -1,14 +1,9 @@
-use std::{
-	collections::HashMap,
-	ops::{Index, Range},
-};
+use std::{ collections::HashMap};
 
 use ivory_expression::Expression;
 use ivory_tokenizer::expression::{ExpressionToken, Op};
-use rand::Rng;
 
 use crate::{
-	mod_loader::ModLoader,
 	runtime::{Runtime, RuntimeContext},
 	value::Value,
 	Result, RuntimeError,
@@ -139,7 +134,6 @@ pub fn len(
 
 #[cfg(test)]
 mod test {
-	use rand::prelude::ThreadRng;
 
 	use super::*;
 

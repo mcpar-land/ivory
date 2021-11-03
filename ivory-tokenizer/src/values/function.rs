@@ -2,12 +2,11 @@ use std::fmt::Display;
 
 use ivory_expression::Expression;
 use nom::{
-	branch::alt,
 	bytes::complete::tag,
 	character::complete::{multispace0, multispace1},
-	combinator::{map, value},
-	multi::{many0, many1, separated_list1},
-	sequence::{preceded, separated_pair, tuple},
+	combinator::map,
+	multi::separated_list1,
+	sequence::{separated_pair, tuple},
 };
 
 use crate::{

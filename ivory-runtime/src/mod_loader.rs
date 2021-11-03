@@ -1,5 +1,5 @@
 use crate::{error::RuntimeError, Result};
-use ivory_tokenizer::{tokenize, Module};
+use ivory_tokenizer::Module;
 
 pub trait ModLoader {
 	fn load(&mut self, url: &str) -> Result<Module>;

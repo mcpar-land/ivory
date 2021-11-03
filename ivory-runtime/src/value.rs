@@ -11,12 +11,10 @@ use ivory_tokenizer::{
 		string::StringValue,
 	},
 };
-use rand::Rng;
 
 use crate::{
 	error::RuntimeError,
 	expr::RolledOp,
-	mod_loader::ModLoader,
 	roll::Roll,
 	runtime::{Runtime, RuntimeContext},
 };
@@ -484,8 +482,8 @@ impl RunOp for bool {
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime,
-		ctx: &RuntimeContext,
+		_: &Runtime,
+		_: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
 			RolledOp::Logic(l) => Ok(Value::Boolean(match l {
@@ -502,8 +500,8 @@ impl RunOp for i32 {
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime,
-		ctx: &RuntimeContext,
+		_: &Runtime,
+		_: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
 			RolledOp::Math { kind, round } => Ok(Value::Integer(match kind {
@@ -538,8 +536,8 @@ impl RunOp for f32 {
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime,
-		ctx: &RuntimeContext,
+		_: &Runtime,
+		_: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
 			RolledOp::Math { kind, round } => {
@@ -575,8 +573,8 @@ impl RunOp for String {
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime,
-		ctx: &RuntimeContext,
+		_: &Runtime,
+		_: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
 			RolledOp::Math {
@@ -593,8 +591,8 @@ impl RunOp for Vec<Value> {
 		&self,
 		other: &Self,
 		op: &RolledOp,
-		runtime: &Runtime,
-		ctx: &RuntimeContext,
+		_: &Runtime,
+		_: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
 			RolledOp::Math {

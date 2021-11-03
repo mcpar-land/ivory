@@ -6,7 +6,7 @@ use nom::{
 	bytes::complete::tag,
 	character::complete::{char, multispace0},
 	combinator::{map, value},
-	multi::{many0, separated_list0},
+	multi::separated_list0,
 	sequence::{delimited, pair, tuple},
 };
 

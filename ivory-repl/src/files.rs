@@ -3,7 +3,6 @@ use std::{fs::File, path::PathBuf, str::FromStr};
 use crate::error::ReplError;
 use ivory_runtime::runtime::Runtime;
 use ivory_tokenizer::{tokenize, Module};
-use rand::Rng;
 
 pub struct FileLoader {
 	pub current_file: Option<PathBuf>,

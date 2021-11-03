@@ -11,21 +11,16 @@ use nom::{
 	bytes::complete::tag,
 	character::complete::{char, multispace0},
 	combinator::{map, value},
-	multi::{many0, separated_list0},
+	multi::many0,
 	sequence::{delimited, pair, preceded, separated_pair},
 };
 
-use crate::{
-	accessor::Accessor,
-	expression::math::ExprOpMathKind,
-	values::{integer::IntegerValue, Value},
-	Parse,
-};
+use crate::{accessor::Accessor, Parse};
 
 use self::{
 	dice_ops::DiceOp,
 	logic::{Comparator, LogicOp},
-	math::{ExprOpMath, ExprOpMathRound},
+	math::ExprOpMath,
 };
 
 impl<O: Parse, T: Parse> Parse for ivory_expression::ExpressionComponent<O, T> {

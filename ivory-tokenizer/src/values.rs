@@ -1,9 +1,6 @@
 use std::fmt::Display;
 
-use nom::{
-	branch::alt,
-	combinator::{map, value},
-};
+use nom::{branch::alt, combinator::map};
 
 use crate::Parse;
 

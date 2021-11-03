@@ -19,13 +19,12 @@ use ivory_tokenizer::{
 	tokenize,
 	values::function::FunctionValue,
 	variable::Variable,
-	Module, Parse,
+	Module,
 };
-use rand::{prelude::StdRng, Rng, RngCore};
+use rand::RngCore;
 use std::{
 	cell::{RefCell, RefMut},
 	collections::BTreeMap,
-	convert::TryInto,
 };
 
 type Component = ExpressionComponent<RolledOp, Value>;

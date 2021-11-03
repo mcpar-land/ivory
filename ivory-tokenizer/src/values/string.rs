@@ -2,8 +2,8 @@ use std::fmt::Display;
 
 use nom::{
 	branch::alt,
-	bytes::complete::{escaped, is_not, take_until},
-	character::complete::{char, multispace1, not_line_ending, one_of},
+	bytes::complete::is_not,
+	character::complete::{char, multispace1},
 	combinator::{map, value, verify},
 	multi::fold_many0,
 	sequence::{delimited, preceded},
@@ -92,10 +92,10 @@ fn parse_string_value() {
 		(r#""this has a \n newline""#, "this has a \n newline"),
 	];
 
-	let strongs_err = [
-		(r#""I am a cool string""#, "I am a cool string"),
-		(r#""I am also a cool string.""#, "I am also a cool string."),
-	];
+	// let strongs_err = [
+	// 	(r#""I am a cool string""#, "I am a cool string"),
+	// 	(r#""I am also a cool string.""#, "I am also a cool string."),
+	// ];
 
 	for (s, r) in strongs.iter() {
 		println!("{}    ->    {}", s, r);

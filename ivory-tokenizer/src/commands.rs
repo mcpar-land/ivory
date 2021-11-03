@@ -5,7 +5,7 @@ use nom::{
 	bytes::complete::tag,
 	character::complete::{line_ending, multispace0, space0},
 	combinator::{eof, map},
-	sequence::{delimited, pair, terminated, tuple},
+	sequence::{pair, terminated},
 };
 
 use crate::{
