@@ -238,7 +238,7 @@ impl<O: Clone, T: Clone> Expression<O, T> {
 			.collect::<Result<Vec<Pair<O, T>>, E>>()?;
 		for (i, pair) in parens_collapsed.iter().enumerate() {
 			let mut lhs = if i == 0 {
-				&self.first
+				&first
 			} else {
 				&parens_collapsed[i - 1].1
 			}
@@ -359,6 +359,32 @@ impl<O: Clone, T: Clone> Clone for Pair<O, T> {
 	}
 }
 
+impl<O: Clone + PartialEq, T: Clone + PartialEq> PartialEq
+	for Expression<O, T>
+{
+	fn eq(&self, other: &Self) -> bool {
+		self.first == other.first && self.pairs == other.pairs
+	}
+}
+
+impl<O: Clone + PartialEq, T: Clone + PartialEq> PartialEq
+	for ExpressionComponent<O, T>
+{
+	fn eq(&self, other: &Self) -> bool {
+		match (self, other) {
+			(Self::Token(l0), Self::Token(r0)) => l0 == r0,
+			(Self::Paren(l0), Self::Paren(r0)) => l0 == r0,
+			_ => false,
+		}
+	}
+}
+
+impl<O: Clone + PartialEq, T: Clone + PartialEq> PartialEq for Pair<O, T> {
+	fn eq(&self, other: &Self) -> bool {
+		self.0 == other.0 && self.1 == other.1
+	}
+}
+
 // display and debug impls
 
 impl<O: Display + Clone, T: Display + Clone> Display
@@ -470,30 +496,54 @@ mod test {
 		println!("{:?}\n{:?}", expr, new_expr);
 	}
 
+	fn expr_collapser(
+		lhs: &mut ExpressionComponent<Op, i32>,
+		op: &Op,
+		rhs: &ExpressionComponent<Op, i32>,
+	) -> Result<bool, &'static str> {
+		match op {
+			Op::A => Ok(true),
+			Op::B => {
+				println!("RUNNING B ON {:?}", lhs);
+				*lhs = lhs.map_tokens(|v| *v + 1);
+				Ok(false)
+			}
+			Op::C => {
+				println!("RUNNING C ON {:?}", lhs);
+				*lhs = lhs.map_tokens(|v| *v + 1);
+				Ok(true)
+			}
+			Op::D => Err("Used op d which causes an error"),
+		}
+	}
+
 	#[test]
 	fn test_expr_collapse() {
 		let expr: Expression<Op, i32> = sample_expression();
 
-		let add: i32 = 1;
-
-		let new_expr: Expression<Op, i32> = expr
-			.collapse::<_, &'static str>(|lhs, op, _| match op {
-				Op::A => Ok(true),
-				Op::B => {
-					println!("RUNNING B ON {:?}", lhs);
-					*lhs = lhs.map_tokens(|v| *v + add);
-					Ok(false)
-				}
-				Op::C => {
-					println!("RUNNING C ON {:?}", lhs);
-					*lhs = lhs.map_tokens(|v| *v + add);
-					Ok(true)
-				}
-				Op::D => Err("Used op d which causes an error"),
-			})
-			.unwrap();
+		let new_expr: Expression<Op, i32> = expr.collapse(expr_collapser).unwrap();
 
 		println!("{:?}", expr);
+		println!("{:?}", new_expr);
+	}
+
+	#[test]
+	fn leading_paren_collapse() {
+		let expr = Expression {
+			first: ExpressionComponent::Paren(Box::new(Expression {
+				first: ExpressionComponent::Token(0),
+				pairs: vec![
+					Pair(Op::B, ExpressionComponent::Token(1)),
+					Pair(Op::A, ExpressionComponent::Token(3)),
+				],
+			})),
+			pairs: vec![
+				Pair(Op::A, ExpressionComponent::Token(1)),
+				Pair(Op::B, ExpressionComponent::Token(1)),
+			],
+		};
+		println!("{:?}", expr);
+		let new_expr: Expression<Op, i32> = expr.collapse(expr_collapser).unwrap();
 		println!("{:?}", new_expr);
 	}
 }

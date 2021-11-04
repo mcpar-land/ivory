@@ -292,7 +292,10 @@ impl Runtime {
 					}
 					Ok(false)
 				}
-				Op::Dice => unreachable!(),
+				Op::Dice => panic!(
+					"Somehow got dice that should be converted out in: {}",
+					rolled
+				),
 				_ => Ok(true),
 			})?;
 
