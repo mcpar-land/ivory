@@ -2,14 +2,14 @@ use std::fmt::Display;
 
 use ivory_expression::Expression;
 use nom::{
-	character::complete::{char, multispace0},
+	character::complete::char,
 	combinator::map,
 	sequence::{separated_pair, tuple},
 };
 
 use crate::{
 	expression::{ExpressionToken, Op},
-	util::variable_name,
+	util::{variable_name, ws0},
 	Parse,
 };
 
@@ -24,7 +24,7 @@ impl Parse for Variable {
 		map(
 			separated_pair(
 				VariableName::parse,
-				tuple((multispace0, char('='), multispace0)),
+				tuple((ws0, char('='), ws0)),
 				Expression::parse,
 			),
 			|(name, value)| Self { name, value },

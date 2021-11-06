@@ -3,7 +3,7 @@ use std::fmt::Display;
 use ivory_expression::Expression;
 use nom::{
 	branch::alt,
-	character::complete::{char, multispace0},
+	character::complete::char,
 	combinator::map,
 	multi::{many0, separated_list0},
 	sequence::{delimited, pair, preceded},
@@ -11,7 +11,7 @@ use nom::{
 
 use crate::{
 	expression::{ExpressionToken, Op},
-	util::comma_separated_display,
+	util::{comma_separated_display, ws0},
 	values::Value,
 	variable::VariableName,
 	Parse,
@@ -33,7 +33,7 @@ impl Parse for Accessor {
 			map(VariableName::parse, |v| AccessorRoot::Variable(v)),
 		));
 
-		let afters = many0(preceded(multispace0, AccessorComponent::parse));
+		let afters = many0(preceded(ws0, AccessorComponent::parse));
 
 		map(pair(first, afters), |(first, afters)| {
 			Accessor(first, afters)
@@ -67,26 +67,26 @@ pub enum AccessorComponent {
 
 impl Parse for AccessorComponent {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		let property = map(
-			preceded(pair(char('.'), multispace0), VariableName::parse),
-			|res| AccessorComponent::Property(res),
-		);
+		let property =
+			map(preceded(pair(char('.'), ws0), VariableName::parse), |res| {
+				AccessorComponent::Property(res)
+			});
 		let index = map(
 			delimited(
-				pair(char('['), multispace0),
+				pair(char('['), ws0),
 				Expression::<Op, ExpressionToken>::parse,
-				pair(multispace0, char(']')),
+				pair(ws0, char(']')),
 			),
 			|e| AccessorComponent::Index(e),
 		);
 		let call = map(
 			delimited(
-				pair(char('('), multispace0),
+				pair(char('('), ws0),
 				separated_list0(
-					delimited(multispace0, char(','), multispace0),
+					delimited(ws0, char(','), ws0),
 					Expression::<Op, ExpressionToken>::parse,
 				),
-				pair(multispace0, char(')')),
+				pair(ws0, char(')')),
 			),
 			|vals| AccessorComponent::Call(vals),
 		);

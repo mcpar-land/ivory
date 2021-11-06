@@ -3,15 +3,16 @@ use std::fmt::Display;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::{multispace0, multispace1},
 	combinator::{map, opt, value},
 	multi::separated_list1,
 	sequence::{pair, preceded, terminated, tuple},
 };
 
 use crate::{
-	util::comma_separated_display, values::string::StringValue,
-	variable::VariableName, Parse,
+	util::{comma_separated_display, ws0, ws1},
+	values::string::StringValue,
+	variable::VariableName,
+	Parse,
 };
 
 #[derive(Clone, Debug)]
@@ -22,9 +23,9 @@ pub struct Use {
 
 impl Parse for Use {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		let (input, _) = terminated(tag("use"), multispace1)(input)?;
-		let (input, froms) = terminated(Froms::parse, multispace1)(input)?;
-		let (input, _) = terminated(tag("from"), multispace1)(input)?;
+		let (input, _) = terminated(tag("use"), ws1)(input)?;
+		let (input, froms) = terminated(Froms::parse, ws1)(input)?;
+		let (input, _) = terminated(tag("from"), ws1)(input)?;
 		let (input, path) = StringValue::parse(input)?;
 
 		Ok((input, Self { froms, path }))
@@ -42,10 +43,7 @@ impl<S: Parse> Parse for As<S> {
 		map(
 			pair(
 				S::parse,
-				opt(preceded(
-					tuple((multispace1, tag("as"), multispace1)),
-					VariableName::parse,
-				)),
+				opt(preceded(tuple((ws1, tag("as"), ws1)), VariableName::parse)),
 			),
 			|(source, alias)| Self { source, alias },
 		)(input)
@@ -63,10 +61,7 @@ impl Parse for Froms {
 		alt((
 			value(Self::Asterix, tag("*")),
 			map(
-				separated_list1(
-					tuple((multispace0, tag(","), multispace0)),
-					As::<VariableName>::parse,
-				),
+				separated_list1(tuple((ws0, tag(","), ws0)), As::<VariableName>::parse),
 				|variables| Self::Variables(variables),
 			),
 		))(input)

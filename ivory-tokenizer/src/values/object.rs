@@ -3,13 +3,13 @@ use std::{collections::HashMap, fmt::Display};
 use ivory_expression::Expression;
 use nom::{
 	bytes::complete::tag,
-	character::complete::multispace0,
 	multi::separated_list0,
 	sequence::{delimited, pair, separated_pair, tuple},
 };
 
 use crate::{
 	expression::{ExpressionToken, Op},
+	util::ws0,
 	variable::VariableName,
 	Parse,
 };
@@ -25,16 +25,16 @@ impl Parse for ObjectValue {
 			&str,
 			Vec<(VariableName, Expression<Op, ExpressionToken>)>,
 		) = delimited(
-			pair(tag("{"), multispace0),
+			pair(tag("{"), ws0),
 			separated_list0(
-				tuple((multispace0, tag(","), multispace0)),
+				tuple((ws0, tag(","), ws0)),
 				separated_pair(
 					VariableName::parse,
-					tuple((multispace0, tag(":"), multispace0)),
+					tuple((ws0, tag(":"), ws0)),
 					Expression::parse,
 				),
 			),
-			pair(multispace0, tag("}")),
+			pair(ws0, tag("}")),
 		)(input)?;
 
 		let mut map = HashMap::new();

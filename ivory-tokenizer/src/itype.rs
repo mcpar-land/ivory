@@ -3,14 +3,15 @@ use std::{collections::HashMap, fmt::Display};
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::multispace0,
 	combinator::{map, value},
 	multi::{many0, separated_list1},
 	sequence::{delimited, pair, separated_pair, terminated, tuple},
 };
 
 use crate::{
-	istruct::StructName, util::comma_separated_display, variable::VariableName,
+	istruct::StructName,
+	util::{comma_separated_display, ws0},
+	variable::VariableName,
 	Parse,
 };
 
@@ -97,7 +98,7 @@ struct ArrayLiteralType(Vec<Type>);
 impl Parse for ArrayLiteralType {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		map(
-			separated_list1(tuple((multispace0, tag(","), multispace0)), Type::parse),
+			separated_list1(tuple((ws0, tag(","), ws0)), Type::parse),
 			|types| Self(types),
 		)(input)
 	}
@@ -116,16 +117,16 @@ impl Parse for ObjectLiteralType {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		map(
 			delimited(
-				pair(tag("{"), multispace0),
+				pair(tag("{"), ws0),
 				separated_list1(
-					tuple((multispace0, tag(","), multispace0)),
+					tuple((ws0, tag(","), ws0)),
 					separated_pair(
 						VariableName::parse,
-						tuple((multispace0, tag(","), multispace0)),
+						tuple((ws0, tag(","), ws0)),
 						Type::parse,
 					),
 				),
-				pair(multispace0, tag("}")),
+				pair(ws0, tag("}")),
 			),
 			|pairs| {
 				let mut map = HashMap::new();

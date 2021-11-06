@@ -1,13 +1,12 @@
 use std::fmt::Display;
 
 use nom::{
-	character::complete::multispace0,
 	combinator::{map, opt},
 	multi::many1,
 	sequence::{pair, preceded, terminated},
 };
 
-use crate::{commands::Command, comment::SingleComment, Parse};
+use crate::{commands::Command, comment::SingleComment, util::ws0, Parse};
 
 pub mod iuse;
 
@@ -16,10 +15,9 @@ pub struct Module(pub Vec<Command>);
 
 impl Parse for Module {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		map(
-			preceded(multispace0, many1(terminated(Command::parse, multispace0))),
-			|v| Self(v),
-		)(input)
+		map(preceded(ws0, many1(terminated(Command::parse, ws0))), |v| {
+			Self(v)
+		})(input)
 	}
 }
 
@@ -61,6 +59,25 @@ fn parse_module() {
 		}
 		
 		
+		"#,
+		r#"
+		# comment
+		x # comment
+		= # comment
+		10 # comment
+		+ # comment
+		12 # comment
+		# comment
+		- # comment
+		69 # comment
+		; # comment
+		# comment
+		y = [ # some comment
+			10, # comment
+			11, # another comment
+			12  # an entire comment
+		]; #comment
+		# comment
 		"#,
 	]);
 

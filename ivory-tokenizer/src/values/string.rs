@@ -3,13 +3,13 @@ use std::fmt::Display;
 use nom::{
 	branch::alt,
 	bytes::complete::is_not,
-	character::complete::{char, multispace1},
+	character::complete::char,
 	combinator::{map, value, verify},
 	multi::fold_many0,
 	sequence::{delimited, preceded},
 };
 
-use crate::Parse;
+use crate::{util::ws1, Parse};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StringValue(pub String);
@@ -30,7 +30,7 @@ impl Parse for StringValue {
 		}
 
 		fn parse_escaped_whitespace(input: &str) -> nom::IResult<&str, &str> {
-			preceded(char('\\'), multispace1)(input)
+			preceded(char('\\'), ws1)(input)
 		}
 
 		fn parse_literal(input: &str) -> nom::IResult<&str, &str> {

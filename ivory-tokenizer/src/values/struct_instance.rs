@@ -3,7 +3,6 @@ use std::{collections::HashMap, fmt::Display};
 use ivory_expression::Expression;
 use nom::{
 	bytes::complete::tag,
-	character::complete::multispace0,
 	multi::separated_list0,
 	sequence::{delimited, pair, separated_pair, tuple},
 };
@@ -11,6 +10,7 @@ use nom::{
 use crate::{
 	expression::{ExpressionToken, Op},
 	istruct::StructName,
+	util::ws0,
 	variable::VariableName,
 	Parse,
 };
@@ -33,16 +33,16 @@ impl Parse for StructInstance {
 				&str,
 				Vec<(VariableName, Expression<Op, ExpressionToken>)>,
 			) = delimited(
-				pair(tag("{"), multispace0),
+				pair(tag("{"), ws0),
 				separated_list0(
-					tuple((multispace0, tag(","), multispace0)),
+					tuple((ws0, tag(","), ws0)),
 					separated_pair(
 						VariableName::parse,
-						tuple((multispace0, tag(":"), multispace0)),
+						tuple((ws0, tag(":"), ws0)),
 						Expression::parse,
 					),
 				),
-				pair(multispace0, tag("}")),
+				pair(ws0, tag("}")),
 			)(input)?;
 
 			let mut map = HashMap::new();
@@ -59,7 +59,7 @@ impl Parse for StructInstance {
 		}
 
 		let (input, (name, values)) =
-			separated_pair(StructName::parse, multispace0, parse_values)(input)?;
+			separated_pair(StructName::parse, ws0, parse_values)(input)?;
 
 		Ok((input, StructInstance { name, values }))
 	}

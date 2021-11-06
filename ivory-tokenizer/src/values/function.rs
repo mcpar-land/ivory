@@ -3,7 +3,6 @@ use std::fmt::Display;
 use ivory_expression::Expression;
 use nom::{
 	bytes::complete::tag,
-	character::complete::{multispace0, multispace1},
 	combinator::map,
 	multi::separated_list1,
 	sequence::{separated_pair, tuple},
@@ -11,6 +10,7 @@ use nom::{
 
 use crate::{
 	expression::{ExpressionToken, Op},
+	util::{ws0, ws1},
 	variable::VariableName,
 	Parse,
 };
@@ -25,8 +25,8 @@ impl Parse for FunctionValue {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		map(
 			separated_pair(
-				separated_list1(multispace1, VariableName::parse),
-				tuple((multispace0, tag("->"), multispace0)),
+				separated_list1(ws1, VariableName::parse),
+				tuple((ws0, tag("->"), ws0)),
 				Expression::parse,
 			),
 			|(args, expr)| Self {

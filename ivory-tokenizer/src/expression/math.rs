@@ -5,12 +5,12 @@ use std::fmt::Display;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::{multispace0, one_of},
+	character::complete::one_of,
 	combinator::{map, opt},
 	sequence::{delimited, pair},
 };
 
-use crate::Parse;
+use crate::{util::ws0, Parse};
 
 use super::{ExpressionToken, Op};
 
@@ -31,11 +31,7 @@ impl Parse for ExprOpMath {
 				|(kind, round)| Self::Binary { kind, round },
 			),
 			map(
-				delimited(
-					pair(tag("?"), multispace0),
-					Expression::parse,
-					pair(multispace0, tag(":")),
-				),
+				delimited(pair(tag("?"), ws0), Expression::parse, pair(ws0, tag(":"))),
 				|expr| Self::Ternary(Box::new(expr)),
 			),
 		))(input)

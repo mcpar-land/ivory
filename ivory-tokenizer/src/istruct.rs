@@ -4,7 +4,7 @@ use ivory_expression::Expression;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::{alphanumeric0, multispace0, multispace1, one_of},
+	character::complete::{alphanumeric0, one_of},
 	combinator::map,
 	multi::separated_list0,
 	sequence::{delimited, pair, preceded, separated_pair, tuple},
@@ -13,6 +13,7 @@ use nom::{
 use crate::{
 	expression::{ExpressionToken, Op},
 	itype::Type,
+	util::{ws0, ws1},
 	variable::VariableName,
 	Parse,
 };
@@ -25,20 +26,20 @@ pub struct StructDefinition {
 
 impl Parse for StructDefinition {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
-		let name = preceded(pair(tag("struct"), multispace1), StructName::parse);
+		let name = preceded(pair(tag("struct"), ws1), StructName::parse);
 		let prop = separated_pair(
 			VariableName::parse,
-			tuple((multispace0, tag(":"), multispace0)),
+			tuple((ws0, tag(":"), ws0)),
 			StructDefinitionValue::parse,
 		);
 		map(
 			separated_pair(
 				name,
-				multispace0,
+				ws0,
 				delimited(
-					pair(tag("{"), multispace0),
-					separated_list0(tuple((multispace0, tag(","), multispace0)), prop),
-					pair(multispace0, tag("}")),
+					pair(tag("{"), ws0),
+					separated_list0(tuple((ws0, tag(","), ws0)), prop),
+					pair(ws0, tag("}")),
 				),
 			),
 			|(name, values)| Self { name, values },

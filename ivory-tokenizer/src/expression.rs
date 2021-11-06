@@ -9,13 +9,13 @@ use ivory_expression::{Expression, ExpressionComponent, Pair};
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::{char, multispace0},
+	character::complete::char,
 	combinator::{map, value},
 	multi::many0,
 	sequence::{delimited, pair, preceded, separated_pair},
 };
 
-use crate::{accessor::Accessor, Parse};
+use crate::{accessor::Accessor, util::ws0, Parse};
 
 use self::{
 	dice_ops::DiceOp,
@@ -29,9 +29,9 @@ impl<O: Parse, T: Parse> Parse for ivory_expression::ExpressionComponent<O, T> {
 			map(T::parse, |r| Self::Token(r)),
 			map(
 				delimited(
-					pair(char('('), multispace0),
+					pair(char('('), ws0),
 					Expression::parse,
-					pair(multispace0, char(')')),
+					pair(ws0, char(')')),
 				),
 				|r| Self::Paren(Box::new(r)),
 			),
@@ -42,7 +42,7 @@ impl<O: Parse, T: Parse> Parse for ivory_expression::ExpressionComponent<O, T> {
 impl<O: Parse, T: Parse> Parse for Pair<O, T> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		map(
-			separated_pair(O::parse, multispace0, ExpressionComponent::<O, T>::parse),
+			separated_pair(O::parse, ws0, ExpressionComponent::<O, T>::parse),
 			|(op, component)| Pair(op, component),
 		)(input)
 	}
@@ -51,7 +51,7 @@ impl<O: Parse, T: Parse> Parse for Pair<O, T> {
 impl<O: Parse, T: Parse> Parse for Expression<O, T> {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		let (input, first) = ExpressionComponent::parse(input)?;
-		let (input, pairs) = many0(preceded(multispace0, Pair::parse))(input)?;
+		let (input, pairs) = many0(preceded(ws0, Pair::parse))(input)?;
 
 		Ok((input, Self { first, pairs }))
 	}

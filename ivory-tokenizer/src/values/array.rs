@@ -4,7 +4,7 @@ use ivory_expression::Expression;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::{char, multispace0},
+	character::complete::char,
 	combinator::{map, value},
 	multi::separated_list0,
 	sequence::{delimited, pair, tuple},
@@ -12,7 +12,7 @@ use nom::{
 
 use crate::{
 	expression::{ExpressionToken, Op},
-	util::comma_separated_display,
+	util::{comma_separated_display, ws0},
 	Parse,
 };
 
@@ -22,18 +22,15 @@ pub struct ArrayValue(pub Vec<Expression<Op, ExpressionToken>>);
 impl Parse for ArrayValue {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		fn empty_array(input: &str) -> nom::IResult<&str, ()> {
-			value((), tuple((char('['), multispace0, char(']'))))(input)
+			value((), tuple((char('['), ws0, char(']'))))(input)
 		}
 		alt((
 			value(ArrayValue(Vec::new()), empty_array),
 			map(
 				delimited(
-					pair(char('['), multispace0),
-					separated_list0(
-						tuple((multispace0, tag(","), multispace0)),
-						Expression::parse,
-					),
-					pair(multispace0, char(']')),
+					pair(char('['), ws0),
+					separated_list0(tuple((ws0, tag(","), ws0)), Expression::parse),
+					pair(ws0, char(']')),
 				),
 				|v| ArrayValue(v),
 			),

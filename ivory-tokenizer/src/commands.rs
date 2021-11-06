@@ -3,13 +3,14 @@ use std::fmt::Display;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::{line_ending, multispace0, space0},
+	character::complete::{line_ending, space0},
 	combinator::{eof, map},
 	sequence::{pair, terminated},
 };
 
 use crate::{
-	istruct::StructDefinition, module::iuse::Use, variable::Variable, Parse,
+	istruct::StructDefinition, module::iuse::Use, util::ws0, variable::Variable,
+	Parse,
 };
 
 #[derive(Clone, Debug)]
@@ -24,12 +25,9 @@ impl Parse for Command {
 		alt((
 			terminated(
 				map(Variable::parse, |v| Self::Variable(v)),
-				pair(multispace0, tag(";")),
+				pair(ws0, tag(";")),
 			),
-			terminated(
-				map(Use::parse, |v| Self::Use(v)),
-				pair(multispace0, tag(";")),
-			),
+			terminated(map(Use::parse, |v| Self::Use(v)), pair(ws0, tag(";"))),
 			terminated(
 				map(StructDefinition::parse, |v| Self::StructDefinition(v)),
 				pair(space0, alt((line_ending, eof))),
