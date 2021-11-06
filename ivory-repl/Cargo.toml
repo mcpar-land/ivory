@@ -14,4 +14,5 @@ rand = "0.8.4"
 quick-error = "2.0.1"
 ivory-runtime = { path = "../ivory-runtime" }
 ivory-tokenizer = { path = "../ivory-tokenizer" }
+ivory-expression = { path = "../ivory-expression" }
 hotwatch = "0.4.6"

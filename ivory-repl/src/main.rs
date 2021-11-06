@@ -4,9 +4,10 @@ use std::{io::Write, process::exit};
 
 mod error;
 mod files;
+mod format;
 mod hint;
 
-use crate::error::ReplError;
+use crate::{error::ReplError, format::contains_rolls};
 use clap::Arg;
 use files::FileLoader;
 use ivory_runtime::{
@@ -25,7 +26,11 @@ impl<'a> App<'a> {
 		let res_eq_str = format!("{}", res_eq);
 		let res_val: Value =
 			self.runtime.math_to_value(res_eq, &RuntimeContext::new())?;
-		println!("{} = {}", res_eq_str, res_val);
+		if res_eq_str == format!("{}", res_val) {
+			println!("{}", res_val);
+		} else {
+			println!("{} = {}", res_eq_str, res_val);
+		}
 		Ok(())
 	}
 
