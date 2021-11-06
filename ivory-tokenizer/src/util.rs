@@ -27,12 +27,12 @@ pub fn ws0(input: &str) -> nom::IResult<&str, &str> {
 
 pub fn ws1(input: &str) -> nom::IResult<&str, &str> {
 	alt((
-		multispace1,
-		recognize(many0(tuple((
-			multispace1,
+		recognize(many1(tuple((
+			multispace0,
 			SingleComment::parse,
 			multispace0,
 		)))),
+		multispace1,
 	))(input)
 }
 
@@ -108,8 +108,9 @@ fn test_variable_name() {
 }
 
 #[test]
-fn test_comment_whitespace() {
+fn test_comment_whitespace0() {
 	let mut test = separated_pair(tag("foo"), ws0, tag("bar"));
+	assert_eq!(test("foobar").unwrap().1, ("foo", "bar"));
 	assert_eq!(test("foo bar").unwrap().1, ("foo", "bar"));
 	assert_eq!(
 		test("foo # this is a comment\nbar").unwrap().1,
@@ -121,4 +122,34 @@ fn test_comment_whitespace() {
 			.1,
 		("foo", "bar")
 	);
+	assert!(test("foo # this is a comment bar").is_err());
+}
+
+#[test]
+fn test_comment_whitespace1() {
+	let mut test = separated_pair(tag("foo"), ws1, tag("bar"));
+	assert_eq!(test("foo bar").unwrap().1, ("foo", "bar"));
+	assert_eq!(
+		test("foo #this is a comment\nbar").unwrap().1,
+		("foo", "bar")
+	);
+	assert_eq!(
+		test("foo#this is a comment\nbar").unwrap().1,
+		("foo", "bar")
+	);
+	assert_eq!(
+		test("foo#this is a comment\n bar").unwrap().1,
+		("foo", "bar")
+	);
+	assert_eq!(
+		test("foo #this is a comment\n bar").unwrap().1,
+		("foo", "bar")
+	);
+	assert_eq!(
+		test("foo # this is a comment\n#also a comment\nbar")
+			.unwrap()
+			.1,
+		("foo", "bar")
+	);
+	assert!(test("foobar").is_err());
 }
