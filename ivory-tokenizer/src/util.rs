@@ -3,14 +3,38 @@ use std::fmt::Display;
 use nom::{
 	branch::alt,
 	bytes::complete::tag,
-	character::complete::{alpha1, alphanumeric1, one_of},
+	character::complete::{
+		alpha1, alphanumeric1, multispace0, multispace1, one_of, space0,
+	},
 	combinator::recognize,
-	multi::many0,
-	sequence::pair,
+	multi::{many0, many1},
+	sequence::{pair, separated_pair, tuple},
 	IResult,
 };
 
-use crate::Parse;
+use crate::{comment::SingleComment, Parse};
+
+pub fn ws0(input: &str) -> nom::IResult<&str, &str> {
+	alt((
+		recognize(many1(tuple((
+			multispace0,
+			SingleComment::parse,
+			multispace0,
+		)))),
+		multispace0,
+	))(input)
+}
+
+pub fn ws1(input: &str) -> nom::IResult<&str, &str> {
+	alt((
+		multispace1,
+		recognize(many0(tuple((
+			multispace1,
+			SingleComment::parse,
+			multispace0,
+		)))),
+	))(input)
+}
 
 pub fn snake_case(input: &str) -> IResult<&str, &str> {
 	recognize(pair(
@@ -81,4 +105,20 @@ fn test_variable_name() {
 	for v in &bad_variables {
 		assert!(variable_name(v).is_err());
 	}
+}
+
+#[test]
+fn test_comment_whitespace() {
+	let mut test = separated_pair(tag("foo"), ws0, tag("bar"));
+	assert_eq!(test("foo bar").unwrap().1, ("foo", "bar"));
+	assert_eq!(
+		test("foo # this is a comment\nbar").unwrap().1,
+		("foo", "bar")
+	);
+	assert_eq!(
+		test("foo \n # this is a comment\n\n\n# this is a comment too \n bar")
+			.unwrap()
+			.1,
+		("foo", "bar")
+	);
 }

@@ -2,12 +2,12 @@ use std::fmt::Display;
 
 use nom::{
 	character::complete::multispace0,
-	combinator::map,
+	combinator::{map, opt},
 	multi::many1,
-	sequence::{preceded, terminated},
+	sequence::{pair, preceded, terminated},
 };
 
-use crate::{commands::Command, Parse};
+use crate::{commands::Command, comment::SingleComment, Parse};
 
 pub mod iuse;
 

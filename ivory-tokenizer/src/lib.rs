@@ -7,6 +7,7 @@ use nom::IResult;
 
 pub mod accessor;
 pub mod commands;
+pub mod comment;
 pub mod expression;
 pub mod istruct;
 pub mod itype;
