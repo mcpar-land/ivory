@@ -366,6 +366,11 @@ impl RuntimeContext {
 			params: BTreeMap::new(),
 		}
 	}
+	pub fn one(k: &str, v: Expression<Op, Value>) -> Self {
+		let mut n = Self::new();
+		n.params.insert(k.to_string(), v);
+		n
+	}
 }
 
 #[cfg(test)]
