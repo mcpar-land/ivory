@@ -15,7 +15,12 @@ use nom::{
 	sequence::{delimited, pair, preceded, separated_pair},
 };
 
-use crate::{accessor::Accessor, util::ws0, Parse};
+use crate::{
+	accessor::{Accessor, AccessorRoot},
+	util::ws0,
+	values::Value,
+	Parse,
+};
 
 use self::{
 	dice_ops::DiceOp,
@@ -92,6 +97,12 @@ impl Display for Op {
 
 #[derive(Clone, Debug)]
 pub struct ExpressionToken(pub Accessor);
+
+impl ExpressionToken {
+	pub fn new(v: Value) -> Self {
+		Self(Accessor(AccessorRoot::Value(v), Vec::new()))
+	}
+}
 
 impl Parse for ExpressionToken {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {

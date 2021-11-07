@@ -14,8 +14,7 @@ int_mod = ability_mod(int);
 wis_mod = ability_mod(wis);
 cha_mod = ability_mod(cha);
 
-ability_check = ability -> 1d20 
-	+ ability_mod(ability);
+ability_check = ability -> 1d20 + ability_mod(ability);
 
 str_check = ability_check(str);
 dex_check = ability_check(dex);
@@ -24,7 +23,7 @@ int_check = ability_check(int);
 wis_check = ability_check(wis);
 cha_check = ability_check(cha);
 
-items = [
-	{ name: "Ring of Something", desc: "A ring that does something" },
-	{ name: "Sword of Something", desc: "A ring that does something" }
-];
+table items
+| name                 | desc                          | ac      |
+| "Ring of Something"  | "A ring that does something"  | 5       |
+| "Sword of Something" | "A sword that does something" | str_mod |
