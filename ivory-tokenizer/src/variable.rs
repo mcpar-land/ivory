@@ -41,6 +41,12 @@ impl Display for Variable {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableName(pub String);
 
+impl VariableName {
+	pub fn new(v: &str) -> VariableName {
+		Self(v.to_string())
+	}
+}
+
 impl Parse for VariableName {
 	fn parse(input: &str) -> nom::IResult<&str, Self> {
 		let (input, val) = variable_name(input)?;

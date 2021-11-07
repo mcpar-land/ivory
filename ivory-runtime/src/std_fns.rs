@@ -30,6 +30,7 @@ impl StdFnLibrary {
 		fns.insert("index_of".to_string(), index_of);
 		fns.insert("len".to_string(), len);
 		fns.insert("map".to_string(), map);
+		fns.insert("fold".to_string(), fold);
 
 		Self { fns }
 	}
@@ -150,7 +151,7 @@ pub fn map(
 	{
 		if fn_args.len() != 1 && fn_args.len() != 2 {
 			return Err(RuntimeError::BadStdFnCall(
-				".map() function argument needs 1 or 2 params".to_string(),
+				".map() function parameter needs 1 or 2 parameters itself".to_string(),
 			));
 		}
 		let has_i = fn_args.len() == 2;
@@ -195,7 +196,47 @@ pub fn map(
 		}
 	} else {
 		Err(RuntimeError::BadStdFnCall(
-			".map() takes only a function as an argument.".to_string(),
+			".map() takes only a function as a parameter".to_string(),
+		))
+	}
+}
+
+pub fn fold(
+	runtime: &Runtime,
+	ctx: &RuntimeContext,
+	args: &Vec<Expression<Op, ExpressionToken>>,
+	val: &Value,
+) -> Result<Value> {
+	enforce_len(args, 2)?;
+	let mut initial = get_arg(runtime, ctx, &args, 0)?;
+	let func = get_arg(runtime, ctx, &args, 1)?;
+	if let Value::Function(FunctionValue {
+		args: fn_args,
+		expr,
+	}) = func
+	{
+		if fn_args.len() != 2 {
+			return Err(RuntimeError::BadStdFnCall(
+				".fold()'s function parameter must have two parameters".to_string(),
+			));
+		}
+		if let Value::Array(vals) = val {
+			for val in vals {
+				let mut map_ctx =
+					RuntimeContext::one(&fn_args[0].0, Expression::new(initial.clone()));
+				map_ctx
+					.params
+					.insert(fn_args[1].0.clone(), Expression::new(val.clone()));
+				initial = runtime.evaluate(&map_ctx, &expr)?;
+			}
+			Ok(initial)
+		} else {
+			Err(no_fn_err("fold", val))
+		}
+	} else {
+		Err(RuntimeError::BadStdFnCall(
+			".fold() only takes an initial value, and a function as its arguments"
+				.to_string(),
 		))
 	}
 }

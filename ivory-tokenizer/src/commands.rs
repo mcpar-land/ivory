@@ -9,8 +9,8 @@ use nom::{
 };
 
 use crate::{
-	istruct::StructDefinition, module::iuse::Use, util::ws0, variable::Variable,
-	Parse,
+	istruct::StructDefinition, module::iuse::Use, table::Table, util::ws0,
+	variable::Variable, Parse,
 };
 
 #[derive(Clone, Debug)]
@@ -30,6 +30,10 @@ impl Parse for Command {
 			terminated(map(Use::parse, |v| Self::Use(v)), pair(ws0, tag(";"))),
 			terminated(
 				map(StructDefinition::parse, |v| Self::StructDefinition(v)),
+				pair(space0, alt((line_ending, eof))),
+			),
+			terminated(
+				map(Table::parse, |t| Self::Variable(t.into_variable())),
 				pair(space0, alt((line_ending, eof))),
 			),
 		))(input)
