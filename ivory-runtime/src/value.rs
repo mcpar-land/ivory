@@ -79,7 +79,7 @@ impl Value {
 	pub fn index(&self, i: &Value) -> Result<Value> {
 		match self {
 			Value::String(s) => {
-				let i = *i.to_integer()? as usize;
+				let i = i.to_integer()? as usize;
 				if let Some(c) = s.chars().nth(i) {
 					Ok(Value::String(c.to_string()))
 				} else {
@@ -87,7 +87,7 @@ impl Value {
 				}
 			}
 			Value::Roll(r) => {
-				let i = *i.to_integer()? as usize;
+				let i = i.to_integer()? as usize;
 				if let Some(dice) = r.rolls.get(i) {
 					Ok(Value::Integer(dice.val() as i32))
 				} else {
@@ -95,7 +95,7 @@ impl Value {
 				}
 			}
 			Value::Array(a) => {
-				let i = *i.to_integer()? as usize;
+				let i = i.to_integer()? as usize;
 				if let Some(v) = a.get(i) {
 					Ok(v.clone())
 				} else {
@@ -174,19 +174,21 @@ impl Value {
 		}
 	}
 
-	pub fn to_integer(&self) -> Result<&i32> {
-		if let Self::Integer(v) = self {
-			Ok(v)
-		} else {
-			Err(RuntimeError::WrongExpectedValue(
+	pub fn to_integer(&self) -> Result<i32> {
+		match self {
+			Value::Integer(v) => Ok(*v),
+			Value::Decimal(v) => Ok(*v as i32),
+			Value::Boolean(b) => Ok(if *b { 1 } else { 0 }),
+			Value::Roll(roll) => Ok(roll.value() as i32),
+			_ => Err(RuntimeError::WrongExpectedValue(
 				ValueKind::Integer,
 				self.kind(),
-			))
+			)),
 		}
 	}
 
 	pub fn to_uint(&self) -> Result<u32> {
-		let i = *self.to_integer()?;
+		let i = self.to_integer()?;
 		if i < 0 {
 			Err(RuntimeError::NegativeDiceNumber)
 		} else {
