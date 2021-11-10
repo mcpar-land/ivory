@@ -69,6 +69,9 @@ impl<'a> App<'a> {
 }
 
 fn main() {
+	if ansi_term::enable_ansi_support().is_err() {
+		colored::control::set_override(false);
+	}
 	let matches = clap::App::new("Ivory")
 		.version(clap::crate_version!())
 		.arg(
