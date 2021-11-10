@@ -7,7 +7,7 @@ mod files;
 mod format;
 mod hint;
 
-use crate::{error::ReplError, format::contains_rolls};
+use crate::error::ReplError;
 use clap::Arg;
 use files::FileLoader;
 use ivory_runtime::{
@@ -69,6 +69,7 @@ impl<'a> App<'a> {
 }
 
 fn main() {
+	#[cfg(target_os = "windows")]
 	if ansi_term::enable_ansi_support().is_err() {
 		colored::control::set_override(false);
 	}
