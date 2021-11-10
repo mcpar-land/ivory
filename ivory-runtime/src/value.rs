@@ -504,21 +504,19 @@ impl RunOp for i32 {
 		_: &RuntimeContext,
 	) -> Result<Value> {
 		match op {
-			RolledOp::Math { kind, round } => Ok(Value::Integer(match kind {
-				ExprOpMathKind::Add => self + other,
-				ExprOpMathKind::Sub => self - other,
-				ExprOpMathKind::Mul => self * other,
-				ExprOpMathKind::Div => match &round {
+			RolledOp::Math { kind, round } => Ok(match kind {
+				ExprOpMathKind::Add => Value::Integer(self + other),
+				ExprOpMathKind::Sub => Value::Integer(self - other),
+				ExprOpMathKind::Mul => Value::Integer(self * other),
+				ExprOpMathKind::Div => Value::Decimal(match &round {
 					Some(round) => match round {
-						ExprOpMathRound::Up => (self + (other - 1)) / other,
-						ExprOpMathRound::Down => self / other,
-						ExprOpMathRound::Round => {
-							(*self as f32 / *other as f32).round() as i32
-						}
+						ExprOpMathRound::Up => (self + (other - 1)) as f32 / *other as f32,
+						ExprOpMathRound::Down => *self as f32 / *other as f32,
+						ExprOpMathRound::Round => (*self as f32 / *other as f32).round(),
 					},
-					None => self / other,
-				},
-			})),
+					None => *self as f32 / *other as f32,
+				}),
+			}),
 			RolledOp::Comparator(c) => Ok(Value::Boolean(match c {
 				Comparator::Gt => *self > *other,
 				Comparator::Lt => *self < *other,
