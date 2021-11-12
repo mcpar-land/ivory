@@ -15,5 +15,11 @@ quick_error! {
 			from(err: std::io::Error) -> (err.to_string())
 			display("I/O error: {}", err)
 		}
+		CommandNotFound(bad_cmd: String) {
+			display("Command not found: {}", bad_cmd)
+		}
+		CommandParsingError(err: String) {
+			display("Error parsing command: {}", err)
+		}
 	}
 }

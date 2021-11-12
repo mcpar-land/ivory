@@ -2,6 +2,7 @@ use colored::*;
 use hint::RuntimeHinter;
 use std::{io::Write, process::exit};
 
+mod commands;
 mod error;
 mod files;
 mod format;
