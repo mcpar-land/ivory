@@ -79,7 +79,7 @@ impl Value {
 	pub fn index(&self, i: &Value) -> Result<Value> {
 		match self {
 			Value::String(s) => {
-				let i = i.to_integer()? as usize;
+				let i = i.to_uint()? as usize;
 				if let Some(c) = s.chars().nth(i) {
 					Ok(Value::String(c.to_string()))
 				} else {
@@ -87,7 +87,7 @@ impl Value {
 				}
 			}
 			Value::Roll(r) => {
-				let i = i.to_integer()? as usize;
+				let i = i.to_uint()? as usize;
 				if let Some(dice) = r.rolls.get(i) {
 					Ok(Value::Integer(dice.val() as i32))
 				} else {
@@ -95,7 +95,7 @@ impl Value {
 				}
 			}
 			Value::Array(a) => {
-				let i = i.to_integer()? as usize;
+				let i = i.to_uint()? as usize;
 				if let Some(v) = a.get(i) {
 					Ok(v.clone())
 				} else {
@@ -104,7 +104,7 @@ impl Value {
 			}
 			Value::Object(o) => {
 				let i = i.to_string()?;
-				if let Some(v) = o.get(i) {
+				if let Some(v) = o.get(&i) {
 					Ok(v.clone())
 				} else {
 					Err(RuntimeError::PropNotFound(i.clone()))
@@ -177,7 +177,7 @@ impl Value {
 	pub fn to_integer(&self) -> Result<i32> {
 		match self {
 			Value::Integer(v) => Ok(*v),
-			Value::Decimal(v) => Ok(*v as i32),
+			Value::Decimal(v) => Ok(v.trunc() as i32),
 			Value::Boolean(b) => Ok(if *b { 1 } else { 0 }),
 			Value::Roll(roll) => Ok(roll.value() as i32),
 			_ => Err(RuntimeError::WrongExpectedValue(
@@ -190,20 +190,22 @@ impl Value {
 	pub fn to_uint(&self) -> Result<u32> {
 		let i = self.to_integer()?;
 		if i < 0 {
-			Err(RuntimeError::NegativeDiceNumber)
+			Err(RuntimeError::NegativeNumber)
 		} else {
 			Ok(i as u32)
 		}
 	}
 
-	pub fn to_decimal(&self) -> Result<&f32> {
-		if let Self::Decimal(v) = self {
-			Ok(v)
-		} else {
-			Err(RuntimeError::WrongExpectedValue(
+	pub fn to_decimal(&self) -> Result<f32> {
+		match self {
+			Value::Integer(v) => Ok(*v as f32),
+			Value::Decimal(v) => Ok(*v),
+			Value::Boolean(b) => Ok(if *b { 1.0 } else { 0.0 }),
+			Value::Roll(roll) => Ok(roll.value() as f32),
+			_ => Err(RuntimeError::WrongExpectedValue(
 				ValueKind::Decimal,
 				self.kind(),
-			))
+			)),
 		}
 	}
 
@@ -221,14 +223,17 @@ impl Value {
 		}
 	}
 
-	pub fn to_string(&self) -> Result<&String> {
-		if let Self::String(v) = self {
-			Ok(v)
-		} else {
-			Err(RuntimeError::WrongExpectedValue(
+	pub fn to_string(&self) -> Result<String> {
+		match self {
+			Value::Integer(i) => Ok(i.to_string()),
+			Value::Decimal(d) => Ok(d.to_string()),
+			Value::Boolean(b) => Ok(if *b { "true" } else { "false" }.to_string()),
+			Value::String(s) => Ok(s.clone()),
+			Value::Roll(r) => Ok(r.value().to_string()),
+			_ => Err(RuntimeError::WrongExpectedValue(
 				ValueKind::String,
 				self.kind(),
-			))
+			)),
 		}
 	}
 

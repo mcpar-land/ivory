@@ -20,8 +20,8 @@ quick_error! {
 		IncompatibleDiceOps {
 			display(s) -> ("Incompatible dice ops")
 		}
-		NegativeDiceNumber {
-			display(s) -> ("Numbers in dice rolls cannot be negative")
+		NegativeNumber {
+			display(s) -> ("Supplied number cannot be negative")
 		}
 		VariableNotFound(var: String) {
 			display(s) -> ("Variable not found: {}", var)
