@@ -1,6 +1,6 @@
 use crate::{
 	expr::{into_prec, RolledOp},
-	mod_loader::ModLoader,
+	mod_loader::{LoadedModule, ModLoader},
 	prec::{self, Token},
 	prec::{Assoc, Climber},
 	roll::Roll,
@@ -79,6 +79,7 @@ impl Runtime {
 			values: RuntimeValues {
 				structs: BTreeMap::new(),
 				variables: BTreeMap::new(),
+				loaded_modules: Vec::new(),
 			},
 			rng: RefCell::new(Box::new(rng)),
 			climber,
@@ -90,29 +91,9 @@ impl Runtime {
 		self.rng.borrow_mut()
 	}
 	pub fn load(&mut self, input: &str) -> Result<()> {
-		let module = tokenize::<Module>(input)?;
-
-		let mut structs = BTreeMap::new();
-		let mut variables = BTreeMap::new();
-
-		for command in module.0.into_iter() {
-			match command {
-				ivory_tokenizer::commands::Command::Variable(variable) => {
-					variables.insert(variable.name.0.clone(), variable);
-				}
-				ivory_tokenizer::commands::Command::StructDefinition(d) => {
-					structs.insert(d.name.0.clone(), d);
-				}
-				ivory_tokenizer::commands::Command::Use(_) => todo!(),
-			}
-		}
-		self.values = RuntimeValues { structs, variables };
-
+		self.values =
+			RuntimeValues::new(tokenize::<Module>(input)?, &mut self.mod_loader)?;
 		Ok(())
-	}
-
-	pub fn load_module(&mut self, name: &str, input: &str) -> Result<()> {
-		todo!();
 	}
 
 	pub fn run(&self, cmd: &str) -> Result<Expression<RolledOp, Value>> {
@@ -134,10 +115,9 @@ impl Runtime {
 			AccessorRoot::Variable(variable) => match ctx.params.get(&variable.0) {
 				Some(param) => param.clone(),
 				None => {
-					let val =
-						self.values.variables.get(&variable.0).ok_or_else(|| {
-							RuntimeError::VariableNotFound(variable.0.clone())
-						})?;
+					let val = self.values.get_variable(&variable.0).ok_or_else(|| {
+						RuntimeError::VariableNotFound(variable.0.clone())
+					})?;
 					self.valueify(&RuntimeContext::new(), &val.value)?
 				}
 			},
@@ -353,6 +333,45 @@ pub struct RuntimeValues {
 	// TODO: look into making these into radix trees instead
 	pub structs: BTreeMap<String, StructDefinition>,
 	pub variables: BTreeMap<String, Variable>,
+	pub loaded_modules: Vec<LoadedModule>,
+}
+
+impl RuntimeValues {
+	pub fn new(module: Module, loader: &mut Box<dyn ModLoader>) -> Result<Self> {
+		let mut structs = BTreeMap::new();
+		let mut variables = BTreeMap::new();
+		let mut loaded_modules = Vec::new();
+
+		for command in module.0.into_iter() {
+			match command {
+				ivory_tokenizer::commands::Command::Variable(variable) => {
+					variables.insert(variable.name.0.clone(), variable);
+				}
+				ivory_tokenizer::commands::Command::StructDefinition(d) => {
+					structs.insert(d.name.0.clone(), d);
+				}
+				ivory_tokenizer::commands::Command::Use(u) => {
+					loaded_modules.push(LoadedModule::new(loader, &u)?);
+				}
+			}
+		}
+		Ok(RuntimeValues {
+			structs,
+			variables,
+			loaded_modules,
+		})
+	}
+	pub fn get_variable(&self, name: &str) -> Option<&Variable> {
+		if let Some(variable) = self.variables.get(name) {
+			return Some(variable);
+		}
+		for module in self.loaded_modules.iter().rev() {
+			if let Some(variable) = module.get_variable(name) {
+				return Some(variable);
+			}
+		}
+		None
+	}
 }
 
 /// For handling context inside of functions
