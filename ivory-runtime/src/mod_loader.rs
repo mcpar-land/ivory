@@ -104,11 +104,14 @@ mod test {
 	fn load_modules() {
 		let m = r#"
 		use * from "a";
+		use * from "b";
+		use * from "c";
 
 		power = a_foo + a_bar;
 		"#;
 		dummy_runtime_ok(m, "power");
 		dummy_runtime_ok(m, "power + a_foo");
+		dummy_runtime_ok(m, "3 + c_bar(10) + b_foo");
 		let m2 = r#"
 			use a_foo from "a";
 			good = a_foo + 10;
@@ -127,5 +130,22 @@ mod test {
 		"#;
 		dummy_runtime_ok(m, "good");
 		dummy_runtime_err(m, "bad");
+	}
+
+	#[test]
+	fn override_load_modules() {
+		let m = r#"
+		use c_foo from "c";
+
+		c_foo = 1000;
+		"#;
+		dummy_runtime_ok(m, "c_foo");
+		let m2 = r#"
+		use c_foo as c_alias from "c";
+
+		c_alias = 999;
+		c_foo = 1000 + c_alias;
+		"#;
+		dummy_runtime_ok(m2, "c_foo");
 	}
 }
