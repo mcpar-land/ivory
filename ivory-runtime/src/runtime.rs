@@ -25,6 +25,7 @@ use rand::RngCore;
 use std::{
 	cell::{RefCell, RefMut},
 	collections::BTreeMap,
+	path::Path,
 };
 
 type Component = ExpressionComponent<RolledOp, Value>;
@@ -90,10 +91,18 @@ impl Runtime {
 	pub fn rng(&self) -> RefMut<Box<dyn RngCore>> {
 		self.rng.borrow_mut()
 	}
-	pub fn load(&mut self, input: &str) -> Result<()> {
-		self.values =
-			RuntimeValues::new(tokenize::<Module>(input)?, &mut self.mod_loader)?;
+	pub fn load(&mut self, input: &str, path: &str) -> Result<()> {
+		self.values = RuntimeValues::new(
+			tokenize::<Module>(input)?,
+			path,
+			&mut self.mod_loader,
+		)?;
 		Ok(())
+	}
+
+	pub fn load_path(&mut self, path: &str, root_path: &Path) -> Result<()> {
+		let s = self.mod_loader.load(path, "")?;
+		self.load(&s, root_path.as_os_str().to_str().unwrap())
 	}
 
 	pub fn run(&self, cmd: &str) -> Result<Expression<RolledOp, Value>> {
@@ -337,7 +346,11 @@ pub struct RuntimeValues {
 }
 
 impl RuntimeValues {
-	pub fn new(module: Module, loader: &mut Box<dyn ModLoader>) -> Result<Self> {
+	pub fn new(
+		module: Module,
+		path: &str,
+		loader: &mut Box<dyn ModLoader>,
+	) -> Result<Self> {
 		let mut structs = BTreeMap::new();
 		let mut variables = BTreeMap::new();
 		let mut loaded_modules = Vec::new();
@@ -351,7 +364,7 @@ impl RuntimeValues {
 					structs.insert(d.name.0.clone(), d);
 				}
 				ivory_tokenizer::commands::Command::Use(u) => {
-					loaded_modules.push(LoadedModule::new(loader, &u)?);
+					loaded_modules.push(LoadedModule::new(loader, &u, path)?);
 				}
 			}
 		}
@@ -428,6 +441,7 @@ mod test {
 		square = a -> a * a;
 		modifier = score -> (score /_ 2) - 5;
 		"#,
+				"",
 			)
 			.unwrap();
 		println!("{}", runtime.run("ooer + 1").unwrap());
@@ -464,6 +478,7 @@ mod test {
 		c = param + 5;
 		d = param -> param + 20;
 		"#,
+				"",
 			)
 			.unwrap();
 		println!("{:#?}", runtime.values.variables);
@@ -482,6 +497,7 @@ mod test {
 			x = [10, 20, 30, 40, 50, 60];
 			y = 5;
 			"#,
+				"",
 			)
 			.unwrap();
 		println!("{}", runtime.run("x.index_of(40)").unwrap());

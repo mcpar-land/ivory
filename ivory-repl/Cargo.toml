@@ -17,4 +17,6 @@ quick-error = "2.0.1"
 ivory-runtime = { path = "../ivory-runtime" }
 ivory-tokenizer = { path = "../ivory-tokenizer" }
 ivory-expression = { path = "../ivory-expression" }
-hotwatch = "0.4.6"
+notify = "4.0.17"
+reqwest = { version = "0.11.6", features = [ "blocking" ] }
+relative-path = "1.5.0"

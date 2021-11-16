@@ -1,6 +1,6 @@
 use colored::*;
 use hint::RuntimeHinter;
-use std::{io::Write, process::exit};
+use std::{any::Any, io::Write, process::exit};
 
 mod commands;
 mod error;
@@ -18,7 +18,6 @@ use ivory_runtime::{
 use rustyline::{error::ReadlineError, Editor};
 struct App<'a> {
 	runtime: &'a Runtime,
-	loader: FileLoader,
 }
 
 impl<'a> App<'a> {
@@ -38,11 +37,12 @@ impl<'a> App<'a> {
 	fn run_loop(&mut self) {
 		let mut rl = Editor::<RuntimeHinter>::new();
 		rl.set_helper(Some(RuntimeHinter(self.runtime)));
+		let zinger = self
+			.runtime
+			.mod_loader
+			.zinger()
+			.unwrap_or("ivory".to_string());
 		loop {
-			let zinger = self
-				.loader
-				.file_display_name()
-				.unwrap_or_else(|| "ivory".to_string());
 			match rl.readline(&format!("{} ~ ", zinger)) {
 				Ok(line) => {
 					rl.add_history_entry(&line);
@@ -101,27 +101,20 @@ fn main() {
 	let run = matches.value_of("RUN");
 	let debug = matches.is_present("DEBUG");
 
-	let mut runtime = Runtime::new(rand::thread_rng(), ());
-	let mut loader = FileLoader { current_file: None };
+	let mut runtime = Runtime::new(rand::thread_rng(), FileLoader::new());
 
 	if let Some(file) = file {
-		if debug {
-			let module = loader
-				.get_module(file)
-				.expect("Error loading module for debug");
-			println!("{:#?}", module);
-			std::io::stdout().flush().unwrap();
-			exit(0);
-		}
-		loader
-			.load(&mut runtime, file)
+		runtime
+			.load_path(
+				file,
+				std::env::current_dir()
+					.expect("Can't access current directory")
+					.as_path(),
+			)
 			.expect("Unable to load file");
 	}
 
-	let mut app = App {
-		runtime: &runtime,
-		loader,
-	};
+	let mut app = App { runtime: &runtime };
 	if let Some(run) = run {
 		app.run(run).expect("error running expression");
 	} else {

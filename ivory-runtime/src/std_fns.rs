@@ -255,6 +255,7 @@ mod test {
 			z = { foo: 10, bar: 100, baz: 1000, child: ["first", "second"] };
 			i = 45;
 			"#,
+			"",
 		)
 		.unwrap();
 		(r, RuntimeContext::new())

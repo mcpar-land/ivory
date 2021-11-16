@@ -6,6 +6,18 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 
 quick_error! {
 	#[derive(Debug, Clone)]
+	pub enum ModLoaderError {
+		ErrorLoadingModule(path: String, err: String) {
+			display(s) -> ("Error loading module \"{}\": {}", path, err)
+		}
+		NoModLoaderSpecified {
+			display(s) -> ("No module loader specified for this runtime")
+		}
+	}
+}
+
+quick_error! {
+	#[derive(Debug, Clone)]
 	pub enum RuntimeError {
 		Syntax(err: ivory_tokenizer::TokenizerError) {
 			from()
@@ -47,14 +59,15 @@ quick_error! {
 		FieldNotOnStruct(struct_name: String, field_name: String) {
 			display(s) -> ("Field {} not present on struct {}", field_name, struct_name)
 		}
-		NoModLoaderSpecified {
-			display(s) -> ("This runtime doesn't have a specified module loader.")
-		}
 		NoStdFnForKind(fn_name: String, kind: ValueKind) {
 			display(s) -> ("No standard function {} for kind \"{}\"", fn_name, kind)
 		}
 		BadStdFnCall(info: String) {
 			display(s) -> ("{}", info)
+		}
+		ModLoader(err: ModLoaderError) {
+			from()
+			display(s) -> ("{}", err)
 		}
 	}
 }

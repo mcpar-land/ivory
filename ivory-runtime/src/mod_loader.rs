@@ -1,19 +1,36 @@
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 
-use crate::{error::RuntimeError, runtime::RuntimeValues, Result};
+use crate::{
+	error::{ModLoaderError, RuntimeError},
+	runtime::RuntimeValues,
+	Result,
+};
 use ivory_tokenizer::{
 	module::iuse::{Froms, Use},
+	tokenize,
 	variable::Variable,
 	Module,
 };
 
 pub trait ModLoader {
-	fn load(&mut self, url: &str) -> Result<Module>;
+	fn load(
+		&mut self,
+		url: &str,
+		parent_path: &str,
+	) -> std::result::Result<String, ModLoaderError>;
+
+	fn zinger(&self) -> Option<String> {
+		None
+	}
 }
 
 impl ModLoader for () {
-	fn load(&mut self, _: &str) -> Result<Module> {
-		Err(RuntimeError::NoModLoaderSpecified)
+	fn load(
+		&mut self,
+		_: &str,
+		_: &str,
+	) -> std::result::Result<String, ModLoaderError> {
+		Err(ModLoaderError::NoModLoaderSpecified)
 	}
 }
 
@@ -24,9 +41,17 @@ pub struct LoadedModule {
 }
 
 impl LoadedModule {
-	pub fn new(loader: &mut Box<dyn ModLoader>, src: &Use) -> Result<Self> {
+	pub fn new(
+		loader: &mut Box<dyn ModLoader>,
+		src: &Use,
+		parent: &str,
+	) -> Result<Self> {
 		Ok(Self {
-			values: RuntimeValues::new(loader.load(src.path.0.as_str())?, loader)?,
+			values: RuntimeValues::new(
+				tokenize::<Module>(&loader.load(src.path.0.as_str(), parent)?)?,
+				src.path.0.as_str(),
+				loader,
+			)?,
 			froms: match &src.froms {
 				Froms::Asterix => ModuleImports::Asterix,
 				Froms::Variables(froms) => ModuleImports::Aliases(
@@ -61,7 +86,6 @@ pub enum ModuleImports {
 
 #[cfg(test)]
 mod test {
-	use ivory_tokenizer::tokenize;
 
 	use crate::runtime::Runtime;
 
@@ -76,11 +100,15 @@ mod test {
 	struct DummyLoader;
 
 	impl ModLoader for DummyLoader {
-		fn load(&mut self, url: &str) -> Result<Module> {
+		fn load(
+			&mut self,
+			url: &str,
+			_: &str,
+		) -> std::result::Result<String, ModLoaderError> {
 			Ok(match url {
-				"a" => tokenize::<Module>(MODS[0])?,
-				"b" => tokenize::<Module>(MODS[1])?,
-				"c" => tokenize::<Module>(MODS[2])?,
+				"a" => MODS[0].to_string(),
+				"b" => MODS[1].to_string(),
+				"c" => MODS[2].to_string(),
 				_ => unreachable!(),
 			})
 		}
@@ -88,7 +116,7 @@ mod test {
 
 	fn dummy_runtime(v: &str, run: &str) -> Result<String> {
 		let mut runtime = Runtime::new(rand::thread_rng(), DummyLoader);
-		runtime.load(v).unwrap();
+		runtime.load(v, "").unwrap();
 		runtime.run(run).map(|v| format!("{}", v))
 	}
 

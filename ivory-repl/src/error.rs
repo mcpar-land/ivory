@@ -1,3 +1,4 @@
+use ivory_runtime::error::ModLoaderError;
 use quick_error::quick_error;
 
 quick_error! {
