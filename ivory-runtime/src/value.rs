@@ -130,6 +130,7 @@ impl Value {
 					Ok(rhs.clone())
 				}
 			}
+			RolledOp::Comparator(Comparator::Eq) => Ok(Boolean(self == rhs)),
 			op => match (self, rhs) {
 				(Integer(a), Integer(b)) => a.op(b, op, runtime, ctx),
 				(Integer(a), Decimal(b)) => (*a as f32).op(b, op, runtime, ctx),
