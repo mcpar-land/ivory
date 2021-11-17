@@ -1,15 +1,6 @@
-use std::{
-	collections::HashMap,
-	convert::TryFrom,
-	path::{Path, PathBuf},
-	str::FromStr,
-};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
-use crate::error::ReplError;
-use ivory_runtime::{
-	error::ModLoaderError, mod_loader::ModLoader, runtime::Runtime,
-};
-use ivory_tokenizer::{tokenize, Module};
+use ivory_runtime::{error::ModLoaderError, mod_loader::ModLoader};
 use relative_path::RelativePath;
 
 pub struct FileLoader {
@@ -24,17 +15,6 @@ impl FileLoader {
 			loaded_files: HashMap::new(),
 		}
 	}
-	// pub fn load(
-	// 	&mut self,
-	// 	runtime: &mut Runtime,
-	// 	url: &str,
-	// ) -> Result<(), ReplError> {
-	// 	let p = PathBuf::from_str(url).expect("Error getting path from string");
-	// 	self.current_file = Some(p);
-	// 	let contents = std::fs::read_to_string(url)?;
-	// 	runtime.load(&contents, url)?;
-	// 	Ok(())
-	// }
 }
 
 impl ModLoader for FileLoader {
@@ -64,10 +44,15 @@ impl ModLoader for FileLoader {
 			if p.is_file() {
 				p.pop();
 			}
-			let final_path = rel_p.to_path(p);
+			let final_path = rel_p.to_logical_path(p);
+
+			self.current_file = Some(final_path.clone());
 
 			Ok(std::fs::read_to_string(&final_path).map_err(|e| {
-				ModLoaderError::ErrorLoadingModule(url.to_string(), e.to_string())
+				ModLoaderError::ErrorLoadingModule(
+					final_path.as_os_str().to_str().unwrap().to_string(),
+					e.to_string(),
+				)
 			})?)
 		}
 	}

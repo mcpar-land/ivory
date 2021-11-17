@@ -1,10 +1,6 @@
-use std::{any::Any, collections::HashMap};
+use std::collections::HashMap;
 
-use crate::{
-	error::{ModLoaderError, RuntimeError},
-	runtime::RuntimeValues,
-	Result,
-};
+use crate::{error::ModLoaderError, runtime::RuntimeValues, Result};
 use ivory_tokenizer::{
 	module::iuse::{Froms, Use},
 	tokenize,

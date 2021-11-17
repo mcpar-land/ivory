@@ -25,7 +25,6 @@ use rand::RngCore;
 use std::{
 	cell::{RefCell, RefMut},
 	collections::BTreeMap,
-	path::Path,
 };
 
 type Component = ExpressionComponent<RolledOp, Value>;
@@ -100,9 +99,9 @@ impl Runtime {
 		Ok(())
 	}
 
-	pub fn load_path(&mut self, path: &str, root_path: &Path) -> Result<()> {
-		let s = self.mod_loader.load(path, "")?;
-		self.load(&s, root_path.as_os_str().to_str().unwrap())
+	pub fn load_path(&mut self, path: &str, root_path: &str) -> Result<()> {
+		let s = self.mod_loader.load(path, root_path)?;
+		self.load(&s, root_path)
 	}
 
 	pub fn run(&self, cmd: &str) -> Result<Expression<RolledOp, Value>> {

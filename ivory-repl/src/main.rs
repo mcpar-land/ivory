@@ -1,6 +1,6 @@
 use colored::*;
 use hint::RuntimeHinter;
-use std::{any::Any, io::Write, process::exit};
+use std::path::Path;
 
 mod commands;
 mod error;
@@ -82,13 +82,6 @@ fn main() {
 				.required(false),
 		)
 		.arg(
-			Arg::with_name("DEBUG")
-				.short("d")
-				.long("debug")
-				.help("Print a debug tree of the module")
-				.required(false),
-		)
-		.arg(
 			Arg::with_name("RUN")
 				.short("r")
 				.long("run")
@@ -99,18 +92,13 @@ fn main() {
 
 	let file = matches.value_of("FILE");
 	let run = matches.value_of("RUN");
-	let debug = matches.is_present("DEBUG");
 
 	let mut runtime = Runtime::new(rand::thread_rng(), FileLoader::new());
 
 	if let Some(file) = file {
+		let filename = Path::new(file).file_name().unwrap().to_str().unwrap();
 		runtime
-			.load_path(
-				file,
-				std::env::current_dir()
-					.expect("Can't access current directory")
-					.as_path(),
-			)
+			.load_path(filename, file)
 			.expect("Unable to load file");
 	}
 
