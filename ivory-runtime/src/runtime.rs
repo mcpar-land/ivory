@@ -24,7 +24,7 @@ use ivory_tokenizer::{
 use rand::RngCore;
 use std::{
 	cell::{RefCell, RefMut},
-	collections::BTreeMap,
+	collections::{BTreeMap, HashSet},
 };
 
 type Component = ExpressionComponent<RolledOp, Value>;
@@ -372,6 +372,14 @@ impl RuntimeValues {
 			variables,
 			loaded_modules,
 		})
+	}
+	pub fn variable_names(&self) -> HashSet<String> {
+		let mut vars: HashSet<String> = HashSet::new();
+		for module in self.loaded_modules.iter() {
+			vars.extend(module.variable_names());
+		}
+		vars.extend(self.variables.keys().cloned().collect::<HashSet<String>>());
+		vars
 	}
 	pub fn get_variable(&self, name: &str) -> Option<&Variable> {
 		if let Some(variable) = self.variables.get(name) {

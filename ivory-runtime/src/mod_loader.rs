@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{error::ModLoaderError, runtime::RuntimeValues, Result};
 use ivory_tokenizer::{
@@ -73,10 +73,17 @@ impl LoadedModule {
 				.flatten(),
 		}
 	}
+	pub fn variable_names(&self) -> HashSet<String> {
+		match &self.froms {
+			ModuleImports::Asterix => self.values.variable_names(),
+			ModuleImports::Aliases(aliases) => aliases.keys().cloned().collect(),
+		}
+	}
 }
 
 pub enum ModuleImports {
 	Asterix,
+	/// Nickname -> Real name
 	Aliases(HashMap<String, String>),
 }
 
