@@ -15,6 +15,15 @@ pub trait ModLoader {
 		parent_path: &str,
 	) -> std::result::Result<String, ModLoaderError>;
 
+	fn rewrite(
+		&mut self,
+		url: &str,
+		parent_path: &str,
+		new_value: &str,
+	) -> std::result::Result<(), ModLoaderError> {
+		Err(ModLoaderError::RewriteNotImplemented)
+	}
+
 	fn zinger(&self) -> Option<String> {
 		None
 	}

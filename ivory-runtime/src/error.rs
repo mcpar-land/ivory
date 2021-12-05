@@ -13,6 +13,9 @@ quick_error! {
 		NoModLoaderSpecified {
 			display(s) -> ("No module loader specified for this runtime")
 		}
+		RewriteNotImplemented {
+			display(s) -> ("This module loader cannot change source files")
+		}
 	}
 }
 

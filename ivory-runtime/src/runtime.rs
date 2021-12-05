@@ -335,6 +335,14 @@ impl Runtime {
 	) -> Result<Value> {
 		Ok(self.climber.process(&into_prec(expr), &self, ctx)?)
 	}
+
+	pub fn edit_variable(
+		&mut self,
+		var_name: &str,
+		var_value: &str,
+	) -> Result<()> {
+		todo!();
+	}
 }
 
 pub struct RuntimeValues {

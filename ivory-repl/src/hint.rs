@@ -36,7 +36,7 @@ impl<'a> Hinter for RuntimeHinter<'a> {
 						.values
 						.get_variable(&key)
 						.map(|v| v.to_string())
-						.unwrap_or("Def not found!!".to_string());
+						.unwrap_or("Def not found!".to_string());
 					Some(AppHint {
 						val: key[skip.clone()].to_string(),
 						display: val[skip.clone()].bright_black().to_string(),
